@@ -507,7 +507,7 @@ input[type=range] {
 // ═══════════════════════════════════════════════════════════
 
 const tools = [
-  { id:'simple-calc', icon:'🧮', title:'Simple Calculator', desc:'Basic arithmetic operations', tag:'Math', tagClass:'tag-math' },
+  { id:'live-speed', icon:'🏎️', title:'Live Speedometer', desc:'Real-time GPS speed tracker', tag:'Live', tagClass:'tag-util' },
   { id:'sci-calc', icon:'🔬', title:'Scientific Calculator', desc:'Advanced math functions', tag:'Math', tagClass:'tag-math' },
   { id:'time-diff', icon:'⏱️', title:'Time Difference', desc:'Duration between two times', tag:'Time', tagClass:'tag-time' },
   { id:'date-diff', icon:'📅', title:'Date Difference', desc:'Days between two dates', tag:'Time', tagClass:'tag-time' },
@@ -568,6 +568,66 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeModal(); }
 function renderTool(id) {
   switch(id) {
 
+          // ── LIVE SPEEDOMETER ──
+case 'live-speed': return `
+  <div style="text-align:center">
+
+    <div style="
+      width:260px;
+      height:260px;
+      border-radius:50%;
+      margin:0 auto;
+      border:8px solid var(--border);
+      background:radial-gradient(circle,var(--card2),var(--bg));
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      box-shadow:0 0 40px rgba(200,241,53,0.08);
+      position:relative;
+    ">
+
+      <div id="live-speed-value"
+        style="
+          font-family:'Bebas Neue',sans-serif;
+          font-size:4rem;
+          color:var(--accent);
+          line-height:1;
+        ">
+        0
+      </div>
+
+      <div style="
+        font-size:0.8rem;
+        letter-spacing:0.2em;
+        color:var(--muted);
+      ">
+        KM/H
+      </div>
+
+    </div>
+
+    <div id="live-speed-status"
+      style="
+        margin-top:1rem;
+        font-size:0.7rem;
+        color:var(--muted);
+        letter-spacing:0.1em;
+      ">
+      Waiting for GPS...
+    </div>
+
+    <button class="btn" onclick="startSpeedometer()">
+      START SPEEDOMETER
+    </button>
+
+    <button class="btn btn-ghost" onclick="stopSpeedometer()">
+      STOP
+    </button>
+
+  </div>
+`;
+          
     // ── SCIENTIFIC CALCULATOR ──
     case 'sci-calc': return `
       <div class="calc-display">
@@ -1151,6 +1211,90 @@ function generateRandom() {
 document.addEventListener('input', e => {
   if(e.target.closest('.wheel-item-row')) drawWheel();
 });
+
+
+// ═══════════════════════════════════════════════════════════
+// LIVE SPEEDOMETER
+// ═══════════════════════════════════════════════════════════
+
+let speedWatchId = null;
+
+function startSpeedometer() {
+
+  const speedEl = document.getElementById('live-speed-value');
+  const statusEl = document.getElementById('live-speed-status');
+
+  if (!navigator.geolocation) {
+    statusEl.textContent = 'Geolocation not supported';
+    return;
+  }
+
+  statusEl.textContent = 'Starting GPS...';
+
+  speedWatchId = navigator.geolocation.watchPosition(
+
+    pos => {
+
+      let speed = pos.coords.speed;
+
+      // speed comes in m/s
+      if (speed == null) {
+        speedEl.textContent = '0';
+        statusEl.textContent = 'Speed unavailable';
+        return;
+      }
+
+      // convert to km/h
+      speed = speed * 3.6;
+
+      speedEl.textContent = Math.round(speed);
+
+      statusEl.innerHTML = `
+        Accuracy: ${Math.round(pos.coords.accuracy)}m
+      `;
+
+    },
+
+    err => {
+
+      switch(err.code) {
+        case err.PERMISSION_DENIED:
+          statusEl.textContent = 'Location permission denied';
+          break;
+
+        case err.POSITION_UNAVAILABLE:
+          statusEl.textContent = 'Location unavailable';
+          break;
+
+        case err.TIMEOUT:
+          statusEl.textContent = 'GPS timeout';
+          break;
+
+        default:
+          statusEl.textContent = 'GPS error';
+      }
+
+    },
+
+    {
+      enableHighAccuracy: true,
+      maximumAge: 0,
+      timeout: 5000
+    }
+
+  );
+
+}
+
+function stopSpeedometer() {
+
+  if (speedWatchId !== null) {
+    navigator.geolocation.clearWatch(speedWatchId);
+    speedWatchId = null;
+  }
+
+  document.getElementById('live-speed-status').textContent = 'Stopped';
+}
 </script>
 </body>
 </html>
