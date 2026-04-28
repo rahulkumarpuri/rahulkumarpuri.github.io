@@ -568,17 +568,6 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeModal(); }
 function renderTool(id) {
   switch(id) {
 
-    // ── SIMPLE CALCULATOR ──
-    case 'simple-calc': return `
-      <div class="calc-display">
-        <div id="calc-expr" style="font-size:0.75rem;color:var(--muted);min-height:1.2em"></div>
-        <div class="main" id="calc-disp">0</div>
-      </div>
-      <div class="calc-grid">
-        ${['C','±','%','÷','7','8','9','×','4','5','6','−','1','2','3','+','0','','.',  '=']
-          .map(b=>`<button class="calc-btn ${['÷','×','−','+'].includes(b)?'op':b==='='?'eq':''}" onclick="calcBtn('${b}')">${b}</button>`).join('')}
-      </div>`;
-
     // ── SCIENTIFIC CALCULATOR ──
     case 'sci-calc': return `
       <div class="calc-display">
@@ -775,56 +764,6 @@ function initTool(id) {
   if (id === 'lorem') { generateLorem(); }
   if (id === 'data-size') { document.getElementById('ds-val').value = 1; convertData(); }
   if (id === 'speed-conv') { document.getElementById('spd-val').value = 100; convertSpeed(); }
-}
-
-// ═══════════════════════════════════════════════════════════
-// SIMPLE CALCULATOR
-// ═══════════════════════════════════════════════════════════
-
-const calcState = {
-  display: '0', expr: '', prev: null, op: null, justCalc: false,
-  reset() { this.display='0'; this.expr=''; this.prev=null; this.op=null; this.justCalc=false; this.update(); },
-  update() {
-    const d = document.getElementById('calc-disp');
-    const e = document.getElementById('calc-expr');
-    if(d) d.textContent = this.display;
-    if(e) e.textContent = this.expr;
-  }
-};
-
-function calcBtn(b) {
-  const s = calcState;
-  if (b === 'C') { s.reset(); return; }
-  if (b === '±') { s.display = String(-parseFloat(s.display)||0); s.update(); return; }
-  if (b === '%') { s.display = String(parseFloat(s.display)/100); s.update(); return; }
-  if (['÷','×','−','+'].includes(b)) {
-    s.prev = parseFloat(s.display);
-    s.op = b; s.expr = s.display + ' ' + b;
-    s.justCalc = true; s.update(); return;
-  }
-  if (b === '=') {
-    if (s.op && s.prev !== null) {
-      const cur = parseFloat(s.display);
-      const ops = {'÷':'/','×':'*','−':'-','+':'+'};
-      let res;
-      if(s.op==='÷') res = s.prev / cur;
-      else if(s.op==='×') res = s.prev * cur;
-      else if(s.op==='−') res = s.prev - cur;
-      else res = s.prev + cur;
-      s.expr = s.expr + ' ' + s.display + ' =';
-      s.display = String(+res.toFixed(10));
-      s.prev = null; s.op = null; s.justCalc = true;
-    }
-    s.update(); return;
-  }
-  if (b === '.') {
-    if(s.justCalc) { s.display = '0.'; s.justCalc=false; }
-    else if(!s.display.includes('.')) s.display += '.';
-    s.update(); return;
-  }
-  if (s.justCalc || s.display === '0') { s.display = b; s.justCalc=false; }
-  else s.display += b;
-  s.update();
 }
 
 // ═══════════════════════════════════════════════════════════
