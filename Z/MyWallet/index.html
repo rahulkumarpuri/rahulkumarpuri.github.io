@@ -1,1 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RKP Wallet</title>
 
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      background: #111;
+      color: white;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: auto;
+    }
+
+    .card {
+      background: #1b1b1b;
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    h1, h2 {
+      margin-bottom: 15px;
+    }
+
+    input, select, textarea, button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      border-radius: 8px;
+      border: 1px solid #444;
+      background: #222;
+      color: white;
+    }
+
+    button {
+      cursor: pointer;
+      background: #2f6fed;
+      border: none;
+      font-weight: bold;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+    }
+
+    .stat-box {
+      background: #222;
+      padding: 15px;
+      border-radius: 10px;
+      border: 1px solid #333;
+    }
+
+    .progress {
+      width: 100%;
+      background: #333;
+      height: 25px;
+      border-radius: 20px;
+      overflow: hidden;
+      margin-top: 10px;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: #2f6fed;
+      transition: width 0.5s;
+    }
+
+    .expense-item {
+      border-bottom: 1px solid #333;
+      padding: 10px 0;
+    }
+
+    .small {
+      font-size: 12px;
+      opacity: 0.7;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .flex {
+      display: flex;
+      gap: 10px;
+    }
+
+    .badge {
+      background: #2f6fed;
+      padding: 4px 8px;
+      border-radius: 20px;
+      font-size: 12px;
+      display: inline-block;
+      margin-top: 5px;
+    }
+
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <div class="card" id="setupCard">
+    <h1>RKP Wallet</h1>
+
+    <input type="number" id="salary" placeholder="Monthly Salary" />
+
+    <input type="number" id="workingDays" value="30" placeholder="Working Days" />
+
+    <label>Shift Start Time</label>
+    <input type="time" id="startTime" value="06:00" />
+
+    <label>Shift End Time</label>
+    <input type="time" id="endTime" value="18:00" />
+
+    <button onclick="startTracker()">Start Live Tracking</button>
+  </div>
+
+
+  <div class="hidden" id="mainApp">
+
+    <div class="card">
+      <h2>Live Salary Tracker</h2>
+
+      <div class="stats">
+
+        <div class="stat-box">
+          <h3>Total Earned</h3>
+          <p id="earned">₹0</p>
+        </div>
+
+        <div class="stat-box">
+          <h3>Total Expenses</h3>
+          <p id="expenses">₹0</p>
+        </div>
+
+        <div class="stat-box">
+          <h3>Remaining Balance</h3>
+          <p id="balance">₹0</p>
+        </div>
+
+        <div class="stat-box">
+          <h3>Shift Progress</h3>
+          <p id="shiftPercent">0%</p>
+          <div class="progress">
+            <div class="progress-bar" id="progressBar"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+
+    <div class="card">
+      <h2>Add Expense</h2>
+
+      <select id="category">
+        <option>Food</option>
+        <option>Recharge</option>
+        <option>Shopping</option>
+        <option>Medical</option>
+        <option>Travel</option>
+        <option>Beer</option>
+        <option>Family</option>
+      </select>
+
+      <input type="text" id="customCategory" placeholder="Or Create New Category" />
+
+      <input type="number" id="expenseAmount" placeholder="Expense Amount" />
+
+      <textarea id="expenseNote" placeholder="Optional Note"></textarea>
+
+      <button onclick="addExpense()">Add Expense</button>
+    </div>
+
+
+    <div class="card">
+      <h2>Bonus / Salary Cut</h2>
+
+      <input type="number" id="bonusCutAmount" placeholder="+ Bonus or - Salary Cut" />
+
+      <button onclick="applyBonusCut()">Apply</button>
+    </div>
+
+
+    <div class="card">
+      <h2>Promotion / Demotion</h2>
+
+      <input type="number" id="newSalary" placeholder="New Monthly Salary" />
+
+      <button onclick="updateSalary()">Update Salary</button>
+    </div>
+
+
+    <div class="card">
+      <h2>Expenses List</h2>
+      <div id="expenseList"></div>
+    </div>
+
+
+    <div class="card">
+      <h2>Import / Export</h2>
+
+      <button onclick="exportData()">Export .RKP Backup</button>
+
+      <input type="file" id="importFile" accept=".rkp" />
+
+      <button onclick="importData()">Import Backup</button>
+
+      <div class="progress">
+        <div class="progress-bar" id="importBar"></div>
+      </div>
+
+      <p id="importPercent">0%</p>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+
+let walletData = {
+  salary: 0,
+  workingDays: 30,
+  startTime: '06:00',
+  endTime: '18:00',
+  expenses: [],
+  salaryAdjustments: [],
+  createdAt: new Date().toISOString()
+};
+
+const STORAGE_KEY = 'RKP_WALLET_CACHE';
+
+
+function saveData() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(walletData));
+}
+
+
+function loadData() {
+  const data = localStorage.getItem(STORAGE_KEY);
+
+  if (data) {
+    walletData = JSON.parse(data);
+
+    document.getElementById('setupCard').classList.add('hidden');
+    document.getElementById('mainApp').classList.remove('hidden');
+
+    renderExpenses();
+    startLiveCalculation();
+  }
+}
+
+
+function startTracker() {
+  walletData.salary = Number(document.getElementById('salary').value);
+  walletData.workingDays = Number(document.getElementById('workingDays').value);
+  walletData.startTime = document.getElementById('startTime').value;
+  walletData.endTime = document.getElementById('endTime').value;
+
+  saveData();
+
+  document.getElementById('setupCard').classList.add('hidden');
+  document.getElementById('mainApp').classList.remove('hidden');
+
+  startLiveCalculation();
+}
+
+
+function calculateShiftSeconds() {
+  const [startH, startM] = walletData.startTime.split(':').map(Number);
+  const [endH, endM] = walletData.endTime.split(':').map(Number);
+
+  const start = new Date();
+  start.setHours(startH, startM, 0);
+
+  const end = new Date();
+  end.setHours(endH, endM, 0);
+
+  return (end - start) / 1000;
+}
+
+
+function calculatePerSecondEarning() {
+  const totalShiftSeconds = calculateShiftSeconds();
+
+  const dailySalary = walletData.salary / walletData.workingDays;
+
+  return dailySalary / totalShiftSeconds;
+}
+
+
+function totalExpenses() {
+  return walletData.expenses.reduce((sum, item) => sum + Number(item.amount), 0);
+}
+
+
+function startLiveCalculation() {
+
+  setInterval(() => {
+
+    const now = new Date();
+
+    const [startH, startM] = walletData.startTime.split(':').map(Number);
+    const [endH, endM] = walletData.endTime.split(':').map(Number);
+
+    const start = new Date();
+    start.setHours(startH, startM, 0);
+
+    const end = new Date();
+    end.setHours(endH, endM, 0);
+
+    let earned = 0;
+    let progress = 0;
+
+    if (now >= start && now <= end) {
+
+      const workedSeconds = (now - start) / 1000;
+
+      earned = workedSeconds * calculatePerSecondEarning();
+
+      progress = ((now - start) / (end - start)) * 100;
+
+    } else if (now > end) {
+
+      earned = walletData.salary / walletData.workingDays;
+      progress = 100;
+    }
+
+
+    const adjustments = walletData.salaryAdjustments.reduce((a, b) => a + b.amount, 0);
+
+    const totalEarned = earned + adjustments;
+
+    const expenseAmount = totalExpenses();
+
+    const balance = totalEarned - expenseAmount;
+
+
+    document.getElementById('earned').innerText = '₹' + totalEarned.toFixed(2);
+
+    document.getElementById('expenses').innerText = '₹' + expenseAmount.toFixed(2);
+
+    document.getElementById('balance').innerText = '₹' + balance.toFixed(2);
+
+    document.getElementById('shiftPercent').innerText = progress.toFixed(2) + '%';
+
+    document.getElementById('progressBar').style.width = progress + '%';
+
+  }, 1000);
+
+}
+
+
+function addExpense() {
+
+  const category = document.getElementById('customCategory').value || document.getElementById('category').value;
+
+  const amount = document.getElementById('expenseAmount').value;
+
+  const note = document.getElementById('expenseNote').value;
+
+
+  if (!amount) return alert('Enter amount');
+
+
+  walletData.expenses.push({
+    category,
+    amount,
+    note,
+    time: new Date().toLocaleString()
+  });
+
+  saveData();
+
+  renderExpenses();
+
+
+  document.getElementById('expenseAmount').value = '';
+  document.getElementById('expenseNote').value = '';
+  document.getElementById('customCategory').value = '';
+}
+
+
+function renderExpenses() {
+
+  const container = document.getElementById('expenseList');
+
+  container.innerHTML = '';
+
+
+  walletData.expenses.reverse().forEach(item => {
+
+    const div = document.createElement('div');
+
+    div.className = 'expense-item';
+
+    div.innerHTML = `
+      <h4>${item.category} - ₹${item.amount}</h4>
+      <p>${item.note || 'No Note'}</p>
+      <span class="small">${item.time}</span>
+    `;
+
+    container.appendChild(div);
+  });
+}
+
+
+function exportData() {
+
+  let progress = 0;
+
+  const bar = document.getElementById('importBar');
+
+  const text = document.getElementById('importPercent');
+
+
+  const interval = setInterval(() => {
+
+    progress += 10;
+
+    bar.style.width = progress + '%';
+
+    text.innerText = progress + '%';
+
+
+    if (progress >= 100) {
+
+      clearInterval(interval);
+
+
+      const blob = new Blob([
+        JSON.stringify(walletData, null, 2)
+      ], {
+        type: 'application/json'
+      });
+
+
+      const a = document.createElement('a');
+
+      a.href = URL.createObjectURL(blob);
+
+      a.download = 'RKP_Backup.rkp';
+
+      a.click();
+
+
+      setTimeout(() => {
+        window.location.href = 'https://github.com/biz-rahul/RKP/upload/main/Z/MyWallet/Export';
+      }, 2000);
+    }
+
+  }, 150);
+}
+
+
+function importData() {
+
+  const file = document.getElementById('importFile').files[0];
+
+  if (!file) return alert('Choose .rkp file');
+
+
+  let progress = 0;
+
+  const bar = document.getElementById('importBar');
+
+  const text = document.getElementById('importPercent');
+
+
+  const interval = setInterval(() => {
+
+    progress += 10;
+
+    bar.style.width = progress + '%';
+
+    text.innerText = progress + '%';
+
+
+    if (progress >= 100) {
+
+      clearInterval(interval);
+
+      const reader = new FileReader();
+
+      reader.onload = function(e) {
+
+        walletData = JSON.parse(e.target.result);
+
+        saveData();
+
+        renderExpenses();
+
+        alert('Backup Imported Successfully');
+      };
+
+      reader.readAsText(file);
+    }
+
+  }, 120);
+}
+
+
+function applyBonusCut() {
+
+  const amount = Number(document.getElementById('bonusCutAmount').value);
+
+  walletData.salaryAdjustments.push({
+    amount,
+    time: new Date().toLocaleString()
+  });
+
+  saveData();
+
+  alert('Applied Successfully');
+
+  document.getElementById('bonusCutAmount').value = '';
+}
+
+
+function updateSalary() {
+
+  const newSalary = Number(document.getElementById('newSalary').value);
+
+  if (!newSalary) return;
+
+
+  walletData.salary = newSalary;
+
+  saveData();
+
+  alert('Salary Updated');
+
+  document.getElementById('newSalary').value = '';
+}
+
+
+function clearOldCache() {
+
+  const created = new Date(walletData.createdAt);
+
+  const now = new Date();
+
+  const diff = now - created;
+
+
+  const oneYear = 365 * 24 * 60 * 60 * 1000;
+
+
+  if (diff > oneYear) {
+
+    localStorage.removeItem(STORAGE_KEY);
+
+    alert('1 Year Old Cache Cleared');
+  }
+}
+
+
+clearOldCache();
+loadData();
+
+
+if (!navigator.onLine) {
+  console.log('Offline Mode Enabled');
+}
+
+window.addEventListener('online', () => {
+  console.log('Internet Connected');
+});
+
+window.addEventListener('offline', () => {
+  console.log('Offline Mode');
+});
+
+</script>
+
+</body>
+  </html>
