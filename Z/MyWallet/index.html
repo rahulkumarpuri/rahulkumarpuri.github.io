@@ -133,6 +133,9 @@
     <label>Shift End Time</label>
     <input type="time" id="endTime" value="18:00" />
 
+    <label>Joining Date</label>
+    <input type="date" id="joiningDate" />
+
     <button onclick="startTracker()">Start Live Tracking</button>
   </div>
 
@@ -143,6 +146,11 @@
       <h2>Live Salary Tracker</h2>
 
       <div class="stats">
+
+        <div class="stat-box">
+          <h3>Joining Date</h3>
+          <p id="joiningDateText">--</p>
+        </div>
 
         <div class="stat-box">
           <h3>Total Earned</h3>
@@ -247,6 +255,7 @@ let walletData = {
   endTime: '18:00',
   expenses: [],
   salaryAdjustments: [],
+  joiningDate: '',
   createdAt: new Date().toISOString()
 };
 
@@ -278,6 +287,7 @@ function startTracker() {
   walletData.workingDays = Number(document.getElementById('workingDays').value);
   walletData.startTime = document.getElementById('startTime').value;
   walletData.endTime = document.getElementById('endTime').value;
+  walletData.joiningDate = document.getElementById('joiningDate').value;
 
   saveData();
 
@@ -357,6 +367,8 @@ function startLiveCalculation() {
 
     const balance = totalEarned - expenseAmount;
 
+
+    document.getElementById('joiningDateText').innerText = walletData.joiningDate || '--';
 
     document.getElementById('earned').innerText = '₹' + totalEarned.toFixed(2);
 
@@ -596,4 +608,4 @@ window.addEventListener('offline', () => {
 </script>
 
 </body>
-  </html>
+</html>
