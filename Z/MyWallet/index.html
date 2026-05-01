@@ -1215,7 +1215,7 @@ function exportData() {
       const blob = new Blob([JSON.stringify(walletData, null, 2)], { type: 'application/json' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = 'RKP_Backup_' + new Date().toISOString().slice(0,10) + '.rkp';
+      a.download = 'Wallet_' + new Date().toISOString().slice(0,10) + '.rkp';
       a.click();
       URL.revokeObjectURL(a.href);
 
