@@ -29,14 +29,13 @@ body{
 
 .container{
   width:100%;
-  max-width:500px;
+  max-width:520px;
   min-height:95vh;
   backdrop-filter: blur(20px);
   background: rgba(255,255,255,0.05);
   border-radius:20px;
   padding:20px;
   box-shadow:0 0 40px rgba(0,255,255,0.2);
-  border:1px solid rgba(255,255,255,0.1);
   display:flex;
   flex-direction:column;
 }
@@ -50,57 +49,50 @@ h2{
   -webkit-text-fill-color:transparent;
 }
 
+/* COUNTER */
 #counter{
   text-align:center;
   font-size:13px;
   margin-bottom:10px;
-  opacity:0.8;
-  background: rgba(255,255,255,0.05);
+  background:rgba(255,255,255,0.05);
   padding:6px;
   border-radius:8px;
 }
 
-#resumeBtn{
-  display:none;
-  margin-bottom:10px;
-}
-
-label{
-  font-size:13px;
-  opacity:0.8;
-}
-
-input,button{
+/* BUTTONS */
+button{
   width:100%;
-  margin-top:8px;
-  margin-bottom:15px;
   padding:12px;
   border:none;
-  outline:none;
   border-radius:12px;
-}
-
-input{
-  background:rgba(255,255,255,0.1);
-  color:white;
-}
-
-button{
+  margin-top:8px;
+  cursor:pointer;
+  font-weight:600;
   background:linear-gradient(90deg,#00f5ff,#ff00c8);
   color:white;
-  font-weight:600;
-  cursor:pointer;
 }
 
+/* LOG */
 #log{
+  margin-top:10px;
   flex-grow:1;
   overflow:auto;
   padding:10px;
   background:#000;
   border-radius:12px;
   font-size:12px;
-  box-shadow: inset 0 0 10px #00ff00;
   color:#0f0;
+}
+
+/* INPUT */
+input{
+  width:100%;
+  padding:12px;
+  border:none;
+  border-radius:12px;
+  background:rgba(255,255,255,0.1);
+  color:white;
+  margin-top:8px;
 }
 
 </style>
@@ -114,15 +106,14 @@ button{
 
 <div id="counter">No files loaded 😴</div>
 
-<button id="resumeBtn">🔁 Resume Previous Session</button>
+<input type="file" id="fileInput" accept=".mp3">
 
-<label>Select Audio Files</label>
-<input type="file" id="files" multiple accept=".mp3">
+<button id="addBtn">➕ Upload Another File</button>
+<button id="runBtn">🚀 Skip Uploading & Run</button>
 
-<label>Paste Image URL</label>
-<input type="text" id="imgInput">
+<input type="text" id="imgInput" placeholder="Paste image URL">
 
-<button onclick="processImage()">🚀 Submit</button>
+<button onclick="processImage()">⬇️ Download Cover</button>
 
 <div id="log"></div>
 
@@ -130,150 +121,130 @@ button{
 
 <script>
 
-let files = [];
+let fileNames = [];
 let index = 0;
-let savedTotal = 0;
 
-/* 🔥 SAVE STATE */
-function saveState(){
-  localStorage.setItem("rkp_index", index);
-  localStorage.setItem("rkp_total", files.length);
-}
-
-/* 🔥 LOAD STATE */
-function loadState(){
-  let i = localStorage.getItem("rkp_index");
-  let t = localStorage.getItem("rkp_total");
-
-  if(i !== null && t !== null){
-    index = parseInt(i);
-    savedTotal = parseInt(t);
-
-    document.getElementById("counter").innerText =
-      `${savedTotal} Files loaded | ${index} completed | ${savedTotal - index} remaining`;
-
-    document.getElementById("resumeBtn").style.display = "block";
-  }
-}
-
-/* 🔥 COUNTER */
-function updateCounter(){
-  let total = files.length;
-  let remaining = total - index;
-
-  document.getElementById("counter").innerText =
-    `${total} Files loaded | ${index} completed | ${remaining} remaining`;
-}
-
-/* 🔥 LOG */
-const log = (msg) => {
+/* LOG */
+function log(msg){
   let box = document.getElementById("log");
   box.innerHTML += msg + "<br>";
   box.scrollTop = box.scrollHeight;
-};
+}
 
-/* 🔥 FILE SELECT */
-document.getElementById("files").onchange = function(e){
-  files = Array.from(e.target.files);
-
-  if(index > files.length) index = 0;
-
-  updateCounter();
-  saveState();
-};
-
-/* 🔥 RESUME */
-document.getElementById("resumeBtn").onclick = function(){
-  if(files.length === 0){
-    alert("Pehle files select kar bhai 😏");
-    return;
-  }
-
-  log("🔁 Resuming from: " + index);
-  this.style.display = "none";
-  nextFile();
-};
-
-/* 🔥 CLEAN NAME */
-function cleanName(name){
+/* CLEAN NAME */
+function clean(name){
   return name.replace(/\.[^/.]+$/, "");
 }
 
-/* 🔥 NEXT FILE */
-function nextFile(){
+/* UPDATE COUNTER */
+function updateCounter(){
+  let total = fileNames.length;
+  let done = index;
+  let remain = total - done;
 
-  if(index >= files.length){
-    log("🎉 DONE ALL FILES");
-    localStorage.clear();
+  document.getElementById("counter").innerText =
+    `${total} Files loaded | ${done} completed | ${remain} remaining`;
+}
+
+/* ADD FILE */
+document.getElementById("addBtn").onclick = function(){
+  let input = document.getElementById("fileInput");
+
+  if(input.files.length === 0){
+    alert("file select kar bhai 😏");
     return;
   }
 
-  let file = files[index];
-  let name = cleanName(file.name);
+  let name = clean(input.files[0].name);
+  fileNames.push(name);
 
-  let search = encodeURIComponent(name + " official cover photo");
+  log("➕ Added: " + name);
 
-  log("🔍 Searching: " + name);
+  updateCounter();
 
-  setTimeout(()=>{
-    window.open("https://www.google.com/search?tbm=isch&q=" + search, "_blank");
-  },600);
+  input.value = "";
+};
+
+/* RUN */
+document.getElementById("runBtn").onclick = function(){
+
+  if(fileNames.length === 0){
+    alert("kuch to upload kar le bhai 💀");
+    return;
+  }
+
+  localStorage.setItem("rkp_names", JSON.stringify(fileNames));
+  localStorage.setItem("rkp_index", index);
+
+  log("🚀 Starting...");
+
+  next();
+};
+
+/* LOAD FROM CACHE */
+function loadCache(){
+
+  let saved = localStorage.getItem("rkp_names");
+
+  if(saved){
+    fileNames = JSON.parse(saved);
+    index = parseInt(localStorage.getItem("rkp_index")) || 0;
+
+    log("♻️ Restored previous session");
+    updateCounter();
+  }
 }
 
-/* 🔥 PROCESS IMAGE */
+/* NEXT SEARCH */
+function next(){
+
+  if(index >= fileNames.length){
+    log("🎉 DONE");
+    return;
+  }
+
+  let name = fileNames[index];
+
+  let search = encodeURIComponent(name + " album cover");
+
+  log("🔍 " + name);
+
+  /* SAME TAB REDIRECT 🔥 */
+  window.location.href = "https://www.google.com/search?tbm=isch&q=" + search;
+}
+
+/* PROCESS IMAGE */
 async function processImage(){
 
   let url = document.getElementById("imgInput").value;
 
   if(!url){
-    alert("URL daal bhai 😭");
+    alert("URL daal 😏");
     return;
   }
 
-  let name = cleanName(files[index].name);
+  let name = fileNames[index];
 
-  try{
-
-    let finalURL = url;
-
-    if(url.includes("imgres")){
-      let u = new URL(url);
-      finalURL = decodeURIComponent(u.searchParams.get("imgurl"));
-    }
-
-    let res = await fetch(finalURL);
-    let blob = await res.blob();
-
-    downloadBlob(blob, name);
-
-  }catch(e){
-    log("❌ Failed");
-  }
-}
-
-/* 🔥 DOWNLOAD */
-function downloadBlob(blob, name){
-
-  let ext = blob.type.split("/")[1] || "jpg";
+  let res = await fetch(url);
+  let blob = await res.blob();
 
   let a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = name + "." + ext;
+  a.download = name + ".jpg";
   a.click();
 
-  log("✅ Downloaded: " + name);
+  log("✅ Saved: " + name);
 
   index++;
+  localStorage.setItem("rkp_index", index);
+
   updateCounter();
-  saveState();
 
-  document.getElementById("imgInput").value = "";
-
-  setTimeout(nextFile, 800);
+  setTimeout(next, 800);
 }
 
-/* 🔥 LOAD ON START */
-window.onload = loadState;
+/* INIT */
+window.onload = loadCache;
 
 </script>
 
