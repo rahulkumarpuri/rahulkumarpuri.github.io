@@ -154,6 +154,20 @@ function updateCounter(){
     `${total} Files | ${index} done | ${remain} left`;
 }
 
+/* EXTRACT REAL IMAGE URL */
+function extractRealURL(url){
+  try{
+    if(url.includes("google.com/imgres")){
+      let u = new URL(url);
+      let real = u.searchParams.get("imgurl");
+      return decodeURIComponent(real);
+    }
+    return url;
+  }catch(e){
+    return url;
+  }
+}
+
 /* LOAD JSON */
 function loadJSON(){
   try{
@@ -250,6 +264,9 @@ async function downloadImage(){
     return;
   }
 
+  // 🔥 FIX
+  url = extractRealURL(url);
+
   let name = files[index];
 
   try{
@@ -279,7 +296,7 @@ async function downloadImage(){
     setTimeout(next, 500);
 
   }catch(e){
-    alert("❌ Download failed 😑");
+    alert("❌ Download failed 😑 (CORS ya invalid link)");
   }
 
   btn.disabled = false;
@@ -290,8 +307,10 @@ async function downloadImage(){
 document.getElementById("imgInput").addEventListener("input", e=>{
   let img = document.getElementById("preview");
 
-  if(e.target.value){
-    img.src = e.target.value;
+  let url = extractRealURL(e.target.value);
+
+  if(url){
+    img.src = url;
     img.style.display = "block";
   }else{
     img.style.display = "none";
