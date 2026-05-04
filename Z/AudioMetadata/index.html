@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>MP3 Cover Auto Adder</title>
+  <title>MP3 Cover Auto Adder PRO</title>
 </head>
 <body>
 
@@ -10,47 +10,60 @@
 <button onclick="processFiles()">Process</button>
 
 <script src="https://unpkg.com/browser-id3-writer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
 
 <script>
+
+async function fetchImage(query) {
+  try {
+    // Proxy + DuckDuckGo image search
+    let url = `https://duckduckgo.com/?q=${encodeURIComponent(query)}&iax=images&ia=images`;
+    let res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`);
+    let text = await res.text();
+
+    // Extract image URL (hacky but works 😏)
+    let match = text.match(/"image":"(.*?)"/);
+    if (!match) return null;
+
+    return match[1].replace(/\\u002f/g, "/");
+
+  } catch (e) {
+    console.log("Image fetch error", e);
+    return null;
+  }
+}
+
 async function processFiles() {
   const files = document.getElementById("fileInput").files;
+  const zip = new JSZip();
 
   for (let file of files) {
+
     let name = file.name.replace(".mp3", "");
-    let parts = name.split(" - ");
+    
+    // hyphen ko space me convert
+    let cleanName = name.replace(/-/g, " ");
+    let query = cleanName + " Official Cover photo";
 
-    if (parts.length < 2) {
-      alert("Filename format galat hai: " + file.name);
+    console.log("Searching:", query);
+
+    let imageUrl = await fetchImage(query);
+
+    if (!imageUrl) {
+      console.log("No image found:", file.name);
       continue;
     }
 
-    let artist = parts[0];
-    let song = parts[1];
-
-    console.log("Processing:", artist, song);
-
-    // Deezer API (no key needed 😏)
-    let response = await fetch(`https://api.deezer.com/search?q=${artist} ${song}`);
-    let data = await response.json();
-
-    if (!data.data.length) {
-      console.log("No result:", file.name);
-      continue;
-    }
-
-    let coverUrl = data.data[0].album.cover_big;
-
-    // Fetch image
-    let imgRes = await fetch(coverUrl);
+    // fetch image
+    let imgRes = await fetch(imageUrl);
     let imgBuffer = await imgRes.arrayBuffer();
 
-    // Read file
+    // read audio
     let arrayBuffer = await file.arrayBuffer();
 
-    // Write tags
+    // embed cover
     let writer = new ID3Writer(arrayBuffer);
-    writer.setFrame('TPE1', [artist])
-          .setFrame('TIT2', song)
+    writer.setFrame('TIT2', cleanName)
           .setFrame('APIC', {
             type: 3,
             data: imgBuffer,
@@ -59,15 +72,21 @@ async function processFiles() {
 
     writer.addTag();
 
-    let taggedBlob = writer.getBlob();
+    let blob = writer.getBlob();
 
-    // Download
-    let a = document.createElement("a");
-    a.href = URL.createObjectURL(taggedBlob);
-    a.download = file.name;
-    a.click();
+    // add to zip
+    zip.file(file.name, blob);
   }
+
+  // generate zip
+  let content = await zip.generateAsync({ type: "blob" });
+
+  let a = document.createElement("a");
+  a.href = URL.createObjectURL(content);
+  a.download = "updated_songs.zip";
+  a.click();
 }
+
 </script>
 
 </body>
