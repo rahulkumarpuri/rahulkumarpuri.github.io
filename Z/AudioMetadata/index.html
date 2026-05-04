@@ -25,32 +25,25 @@
 
 <script>
 
-function log(msg){
-  let box=document.getElementById("log");
-  box.innerHTML+=msg+"<br>";
-  box.scrollTop=box.scrollHeight;
+function cleanName(name){
+  return name
+    .replace(/\(.*?\)/g, "") // remove ()
+    .replace(/\[.*?\]/g, "")
+    .replace(/official|hd|mv|video|lyrics|cover|subscribe|tiktok|song/gi, "")
+    .replace(/[_\-]+/g, " ")
+    .replace(/[^\w\u4e00-\u9fa5 ]/g, "") // keep chinese + text
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
-// 🔥 REAL DDG IMAGE SEARCH
 async function getImage(query){
   try{
-    // Step 1: get token
-    let res1=await fetch("https://duckduckgo.com/?q="+encodeURIComponent(query));
-    let text=await res1.text();
+    let res=await fetch(`https://api.allorigins.win/raw?url=https://ddg-api.herokuapp.com/search/image?q=${encodeURIComponent(query)}`);
+    let json=await res.json();
 
-    let vqd=text.match(/vqd='(.*?)'/);
-    if(!vqd) return null;
+    if(!json.image_results.length) return null;
 
-    // Step 2: image API
-    let res2=await fetch(
-      `https://duckduckgo.com/i.js?l=us-en&o=json&q=${encodeURIComponent(query)}&vqd=${vqd[1]}`
-    );
-
-    let json=await res2.json();
-
-    if(!json.results.length) return null;
-
-    return json.results[0].image;
+    return json.image_results[0].image;
 
   }catch(e){
     return null;
@@ -60,20 +53,15 @@ async function getImage(query){
 async function processFiles(){
 
   let files=document.getElementById("fileInput").files;
-  let total=files.length;
-
-  if(!total){
-    alert("Files daal pehle bhai 😭");
-    return;
-  }
-
   let zip=new JSZip();
+
   let success=0, fail=0, done=0;
 
   for(let file of files){
 
-    let name=file.name.replace(".mp3","");
-    let clean=name.replace(/[_-]+/g," ");
+    let raw=file.name.replace(".mp3","");
+    let clean=cleanName(raw);
+
     let query=clean+" official cover";
 
     log("🔍 "+query);
@@ -115,29 +103,21 @@ async function processFiles(){
     }
 
     done++;
-
-    let percent=Math.round((done/total)*100);
-    document.getElementById("progress").style.width=percent+"%";
-    document.getElementById("status").innerText=
-      `Done ${done}/${total} | Success ${success} | Fail ${fail}`;
   }
 
-  // ZIP FIX
   if(success===0){
-    log("🚫 koi file process nahi hui. ZIP cancel.");
+    log("🚫 kuch bhi nahi mila bhai 😭");
     return;
   }
-
-  log("📦 creating zip...");
 
   let content=await zip.generateAsync({type:"blob"});
 
   let a=document.createElement("a");
   a.href=URL.createObjectURL(content);
-  a.download="songs_with_cover.zip";
+  a.download="songs.zip";
   a.click();
 
-  log("🎉 DONE BHAI 🔥");
+  log("🎉 DONE 🔥");
 }
 
 </script>
