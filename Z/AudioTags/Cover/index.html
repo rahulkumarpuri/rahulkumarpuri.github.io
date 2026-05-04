@@ -1,118 +1,183 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Ultimate Audio Cover Tool 😎</title>
+  <title>Ultimate Audio Tool 😎</title>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/browser-id3-writer"></script>
   <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.2/dist/ffmpeg.min.js"></script>
+
+  <style>
+    body {
+      font-family: Arial;
+      background: linear-gradient(135deg, #141e30, #243b55);
+      color: white;
+      padding: 20px;
+    }
+
+    h2 {
+      text-align: center;
+    }
+
+    .card {
+      background: rgba(255,255,255,0.1);
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 15px;
+      backdrop-filter: blur(10px);
+    }
+
+    input, button {
+      padding: 10px;
+      margin: 5px;
+      border-radius: 8px;
+      border: none;
+    }
+
+    input {
+      width: 200px;
+    }
+
+    button {
+      background: #00c6ff;
+      color: black;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      background: #0072ff;
+      color: white;
+    }
+
+    a {
+      color: #00ffcc;
+    }
+  </style>
 </head>
 
 <body>
 
-<h2>🔥 Ultimate ZIP Audio Tool</h2>
+<h2>🔥 Ultimate Audio Cover Tool</h2>
 
-<input id="zipName" placeholder="Enter ZIP Name"/>
-<button onclick="createZip()">Create ZIP</button>
+<div class="card">
+  <input id="zipName" placeholder="Enter ZIP Name"/>
+  <button onclick="createZip()">Create ZIP</button>
+</div>
 
 <div id="zipContainer"></div>
 
-<hr>
+<div class="card">
+  <h3>Upload Images</h3>
+  <input type="file" id="images" multiple>
+</div>
 
-<h3>Upload Images (All at once)</h3>
-<input type="file" id="images" multiple>
+<div class="card">
+  <button onclick="runProcess()">🚀 RUN</button>
+</div>
 
-<br><br>
-<button onclick="runProcess()">🚀 RUN</button>
-
-<h3>Downloads</h3>
-<div id="downloads"></div>
+<div class="card">
+  <h3>Downloads</h3>
+  <div id="downloads"></div>
+</div>
 
 <script>
 let audioFiles = {};
 let imageMap = {};
 
-const { createFFmpeg, fetchFile } = FFmpeg;
-const ffmpeg = createFFmpeg({ log: false });
+// ===== CACHE SYSTEM =====
+const CACHE_KEY = "zipNames";
 
-// ================= ZIP CREATE =================
-function createZip() {
-  let name = document.getElementById("zipName").value;
+function saveCache() {
+  const data = {
+    names: Object.keys(audioFiles),
+    expiry: Date.now() + (7 * 24 * 60 * 60 * 1000)
+  };
+  localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+}
+
+function loadCache() {
+  let data = JSON.parse(localStorage.getItem(CACHE_KEY));
+  if (!data) return;
+
+  if (Date.now() > data.expiry) {
+    localStorage.removeItem(CACHE_KEY);
+    return;
+  }
+
+  data.names.forEach(name => {
+    createZip(name, true);
+  });
+}
+
+// ===== ZIP CREATE =====
+function createZip(nameFromCache=null, skipSave=false) {
+  let name = nameFromCache || document.getElementById("zipName").value;
+
+  if (!name) return;
+
   audioFiles[name] = [];
 
   let div = document.createElement("div");
+  div.className = "card";
   div.innerHTML = `
     <h4>${name}</h4>
     <input type="file" multiple onchange="uploadAudio(event, '${name}')">
   `;
+
   document.getElementById("zipContainer").appendChild(div);
+
+  if (!skipSave) saveCache();
 }
 
-// ================= AUDIO UPLOAD =================
+// ===== AUDIO UPLOAD =====
 function uploadAudio(e, zip) {
   for (let file of e.target.files) {
     audioFiles[zip].push(file);
   }
 }
 
-// ================= CLEAN NAME =================
+// ===== NAME CLEAN =====
 function cleanName(name) {
-  return name
-    .toLowerCase()
+  return name.toLowerCase()
     .replace(/\.[^/.]+$/, "")
     .replace(/\(\d+\)/g, "")
-    .replace(/[^a-z0-9\u4e00-\u9fa5]/gi, "")
-    .trim();
+    .replace(/[^a-z0-9\u4e00-\u9fa5]/gi, "");
 }
 
-// ================= SIMILARITY =================
+// ===== SIMILARITY =====
 function levenshtein(a, b) {
   let matrix = [];
-
   for (let i = 0; i <= b.length; i++) matrix[i] = [i];
   for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
 
   for (let i = 1; i <= b.length; i++) {
     for (let j = 1; j <= a.length; j++) {
-      if (b[i - 1] === a[j - 1]) {
-        matrix[i][j] = matrix[i - 1][j - 1];
-      } else {
-        matrix[i][j] = Math.min(
-          matrix[i - 1][j - 1] + 1,
-          matrix[i][j - 1] + 1,
-          matrix[i - 1][j] + 1
-        );
-      }
+      matrix[i][j] = b[i-1] === a[j-1]
+        ? matrix[i-1][j-1]
+        : Math.min(matrix[i-1][j-1]+1, matrix[i][j-1]+1, matrix[i-1][j]+1);
     }
   }
-
   return matrix[b.length][a.length];
 }
 
 function similarity(a, b) {
-  let dist = levenshtein(a, b);
-  let max = Math.max(a.length, b.length);
-  return 1 - dist / max;
+  return 1 - levenshtein(a,b) / Math.max(a.length, b.length);
 }
 
-// ================= MATCH =================
 function findBestMatch(audioName) {
-  let cleanAudio = cleanName(audioName);
-  let best = null;
-  let score = 0;
-
+  let best = null, score = 0;
   for (let img in imageMap) {
-    let s = similarity(cleanAudio, cleanName(img));
+    let s = similarity(cleanName(audioName), cleanName(img));
     if (s > score) {
       score = s;
       best = img;
     }
   }
-
   return score >= 0.9 ? best : null;
 }
 
-// ================= IMAGE CONVERT =================
+// ===== IMAGE CONVERT =====
 async function convertToJpeg(file) {
   return new Promise(resolve => {
     let img = new Image();
@@ -128,51 +193,46 @@ async function convertToJpeg(file) {
       let ctx = canvas.getContext("2d");
       ctx.drawImage(img, 0, 0);
 
-      canvas.toBlob(blob => resolve(blob), "image/jpeg", 0.9);
+      canvas.toBlob(blob => resolve(blob), "image/jpeg");
     };
 
     reader.readAsDataURL(file);
   });
 }
 
-// ================= LOAD IMAGES =================
 async function prepareImages() {
   let files = document.getElementById("images").files;
-
   for (let file of files) {
-    let base = file.name;
-    let jpeg = await convertToJpeg(file);
-    imageMap[base] = jpeg;
+    imageMap[file.name] = await convertToJpeg(file);
   }
 }
 
-// ================= AUDIO CONVERT =================
+// ===== FFmpeg =====
+const { createFFmpeg, fetchFile } = FFmpeg;
+const ffmpeg = createFFmpeg({ log:false });
+
 async function convertToMp3(file) {
   if (file.name.toLowerCase().endsWith(".mp3")) return file;
 
   if (!ffmpeg.isLoaded()) await ffmpeg.load();
 
-  const input = "input";
-  const output = "output.mp3";
+  ffmpeg.FS("writeFile", "in", await fetchFile(file));
+  await ffmpeg.run("-i", "in", "out.mp3");
 
-  ffmpeg.FS("writeFile", input, await fetchFile(file));
-  await ffmpeg.run("-i", input, output);
-
-  const data = ffmpeg.FS("readFile", output);
-
+  let data = ffmpeg.FS("readFile", "out.mp3");
   return new Blob([data.buffer], { type: "audio/mp3" });
 }
 
-// ================= ADD COVER =================
-async function addCover(mp3File, imageBlob) {
-  let buffer = await mp3File.arrayBuffer();
+// ===== ADD COVER =====
+async function addCover(mp3, img) {
+  let buffer = await mp3.arrayBuffer();
   let writer = new ID3Writer(buffer);
 
-  let imgBuffer = await imageBlob.arrayBuffer();
+  let imgBuf = await img.arrayBuffer();
 
   writer.setFrame("APIC", {
     type: 3,
-    data: new Uint8Array(imgBuffer),
+    data: new Uint8Array(imgBuf),
     description: "cover"
   });
 
@@ -180,14 +240,13 @@ async function addCover(mp3File, imageBlob) {
   return writer.getBlob();
 }
 
-// ================= MAIN PROCESS =================
+// ===== MAIN =====
 async function runProcess() {
   await prepareImages();
 
-  let downloadsDiv = document.getElementById("downloads");
-  downloadsDiv.innerHTML = "";
-
   let failed = [];
+  let downloads = document.getElementById("downloads");
+  downloads.innerHTML = "";
 
   for (let zipName in audioFiles) {
     let zip = new JSZip();
@@ -195,41 +254,39 @@ async function runProcess() {
     for (let file of audioFiles[zipName]) {
       try {
         let mp3 = await convertToMp3(file);
-
         let match = findBestMatch(file.name);
 
-        let finalFile = mp3;
+        let final = match ? await addCover(mp3, imageMap[match]) : mp3;
 
-        if (match) {
-          finalFile = await addCover(mp3, imageMap[match]);
-        }
-
-        zip.file(file.name.replace(/\.[^/.]+$/, ".mp3"), finalFile);
+        zip.file(file.name.replace(/\..+$/, ".mp3"), final);
 
       } catch (e) {
-        console.log("Failed:", file.name);
         failed.push(file.name);
       }
     }
 
-    let content = await zip.generateAsync({ type: "blob" });
-    let url = URL.createObjectURL(content);
+    let blob = await zip.generateAsync({ type: "blob" });
+    let url = URL.createObjectURL(blob);
 
     let a = document.createElement("a");
     a.href = url;
     a.download = zipName + ".zip";
     a.innerText = "Download " + zipName;
 
-    downloadsDiv.appendChild(a);
-    downloadsDiv.appendChild(document.createElement("br"));
+    downloads.appendChild(a);
+    downloads.appendChild(document.createElement("br"));
   }
 
   if (failed.length) {
     let div = document.createElement("div");
     div.innerHTML = "<h4>⚠ Failed Files</h4>" + failed.join("<br>");
-    downloadsDiv.appendChild(div);
+    downloads.appendChild(div);
   }
 }
+
+// LOAD CACHE ON START
+loadCache();
+
 </script>
 
 </body>
