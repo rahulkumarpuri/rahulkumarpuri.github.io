@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>MP3 Cover Auto Adder</title>
+</head>
+<body>
+
+<h2>Upload MP3 Files</h2>
+<input type="file" id="fileInput" multiple accept=".mp3" />
+<button onclick="processFiles()">Process</button>
+
+<script src="https://unpkg.com/browser-id3-writer"></script>
+
+<script>
+async function processFiles() {
+  const files = document.getElementById("fileInput").files;
+
+  for (let file of files) {
+    let name = file.name.replace(".mp3", "");
+    let parts = name.split(" - ");
+
+    if (parts.length < 2) {
+      alert("Filename format galat hai: " + file.name);
+      continue;
+    }
+
+    let artist = parts[0];
+    let song = parts[1];
+
+    console.log("Processing:", artist, song);
+
+    // Deezer API (no key needed 😏)
+    let response = await fetch(`https://api.deezer.com/search?q=${artist} ${song}`);
+    let data = await response.json();
+
+    if (!data.data.length) {
+      console.log("No result:", file.name);
+      continue;
+    }
+
+    let coverUrl = data.data[0].album.cover_big;
+
+    // Fetch image
+    let imgRes = await fetch(coverUrl);
+    let imgBuffer = await imgRes.arrayBuffer();
+
+    // Read file
+    let arrayBuffer = await file.arrayBuffer();
+
+    // Write tags
+    let writer = new ID3Writer(arrayBuffer);
+    writer.setFrame('TPE1', [artist])
+          .setFrame('TIT2', song)
+          .setFrame('APIC', {
+            type: 3,
+            data: imgBuffer,
+            description: 'Cover'
+          });
+
+    writer.addTag();
+
+    let taggedBlob = writer.getBlob();
+
+    // Download
+    let a = document.createElement("a");
+    a.href = URL.createObjectURL(taggedBlob);
+    a.download = file.name;
+    a.click();
+  }
+}
+</script>
+
+</body>
+</html>
