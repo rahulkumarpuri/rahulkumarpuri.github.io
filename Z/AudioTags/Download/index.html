@@ -66,6 +66,11 @@ button{
   cursor:pointer;
 }
 
+button:disabled{
+  opacity:0.5;
+  cursor:not-allowed;
+}
+
 input{
   width:100%;
   padding:12px;
@@ -93,6 +98,13 @@ input{
   color:#0f0;
 }
 
+#preview{
+  width:100%;
+  margin-top:10px;
+  border-radius:10px;
+  display:none;
+}
+
 </style>
 </head>
 
@@ -102,7 +114,7 @@ input{
 
 <h2>🚀 Cover Engine</h2>
 
-<textarea id="jsonInput" placeholder="Paste JSON here..."></textarea>
+<textarea id="jsonInput" placeholder='{"files":["song1","song2"]}'></textarea>
 
 <button onclick="loadJSON()">📥 Load JSON</button>
 
@@ -110,7 +122,11 @@ input{
 
 <input type="text" id="imgInput" placeholder="Paste image URL">
 
-<button onclick="downloadImage()">⬇️ Download Cover</button>
+<img id="preview">
+
+<button id="downloadBtn" onclick="downloadImage()">⬇️ Download Cover</button>
+
+<button onclick="resetAll()">♻️ Reset</button>
 
 <div id="log"></div>
 
@@ -120,6 +136,7 @@ input{
 
 let files = [];
 let index = 0;
+let isDownloading = false;
 
 /* LOG */
 function log(msg){
@@ -139,15 +156,18 @@ function updateCounter(){
 
 /* LOAD JSON */
 function loadJSON(){
-
   try{
     let data = JSON.parse(document.getElementById("jsonInput").value);
 
-    files = data.files || [];
+    if(!data.files || !Array.isArray(data.files)){
+      alert("Proper JSON daal bhai 😑");
+      return;
+    }
+
+    files = data.files;
     index = 0;
 
-    localStorage.setItem("engine_files", JSON.stringify(files));
-    localStorage.setItem("engine_index", index);
+    saveState();
 
     log("✅ JSON loaded");
     updateCounter();
@@ -155,26 +175,46 @@ function loadJSON(){
     next();
 
   }catch(e){
-    alert("invalid JSON bhai 💀");
+    alert("Invalid JSON 💀");
   }
+}
+
+/* SAVE STATE */
+function saveState(){
+  localStorage.setItem("engine_files", JSON.stringify(files));
+  localStorage.setItem("engine_index", index);
 }
 
 /* RESTORE */
 function restore(){
+  try{
+    let f = localStorage.getItem("engine_files");
 
-  let f = localStorage.getItem("engine_files");
+    if(f){
+      files = JSON.parse(f);
+      index = parseInt(localStorage.getItem("engine_index")) || 0;
 
-  if(f){
-    files = JSON.parse(f);
-    index = parseInt(localStorage.getItem("engine_index")) || 0;
+      if(index >= files.length){
+        index = 0;
+      }
 
-    log("♻️ session restored");
-    updateCounter();
+      log("♻️ Session restored");
+      updateCounter();
+    }
+
+  }catch(e){
+    localStorage.clear();
+    log("⚠️ Cache reset");
   }
 }
 
 /* NEXT SEARCH */
 function next(){
+
+  if(!files.length){
+    log("⚠️ No files loaded");
+    return;
+  }
 
   if(index >= files.length){
     log("🎉 DONE ALL");
@@ -184,47 +224,97 @@ function next(){
   let name = files[index];
   let search = encodeURIComponent(name + " album cover");
 
-  log("🔍 " + name);
+  log("🔍 Searching: " + name);
 
-  window.location.href =
-    "https://www.google.com/search?tbm=isch&q=" + search;
+  window.open(
+    "https://www.google.com/search?tbm=isch&q=" + search,
+    "_blank"
+  );
 }
 
 /* DOWNLOAD */
 async function downloadImage(){
 
+  if(isDownloading) return;
+
+  let btn = document.getElementById("downloadBtn");
+  btn.disabled = true;
+  isDownloading = true;
+
   let url = document.getElementById("imgInput").value;
 
   if(!url){
-    alert("URL daal 😏");
+    alert("URL daal bhai 😏");
+    btn.disabled = false;
+    isDownloading = false;
     return;
   }
 
   let name = files[index];
 
-  let res = await fetch(url);
-  let blob = await res.blob();
+  try{
 
-  let a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = name + ".jpg";
-  a.click();
+    log("⏳ Downloading...");
 
-  log("✅ saved: " + name);
+    let res = await fetch(url);
 
-  index++;
+    if(!res.ok) throw new Error();
 
-  localStorage.setItem("engine_index", index);
+    let blob = await res.blob();
 
+    let a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name + ".jpg";
+    a.click();
+
+    log("✅ Saved: " + name);
+
+    index++;
+    saveState();
+    updateCounter();
+
+    document.getElementById("imgInput").value = "";
+    document.getElementById("preview").style.display = "none";
+
+    setTimeout(next, 500);
+
+  }catch(e){
+    alert("❌ Download failed 😑");
+  }
+
+  btn.disabled = false;
+  isDownloading = false;
+}
+
+/* PREVIEW */
+document.getElementById("imgInput").addEventListener("input", e=>{
+  let img = document.getElementById("preview");
+
+  if(e.target.value){
+    img.src = e.target.value;
+    img.style.display = "block";
+  }else{
+    img.style.display = "none";
+  }
+});
+
+/* RESET */
+function resetAll(){
+  localStorage.clear();
+  files = [];
+  index = 0;
   updateCounter();
-
-  document.getElementById("imgInput").value = "";
-
-  setTimeout(next, 800);
+  log("🧹 Reset done");
 }
 
 /* INIT */
-window.onload = restore;
+window.onload = () => {
+  restore();
+
+  if(files.length && index < files.length){
+    log("▶️ Ready from " + index);
+  }
+};
 
 </script>
 
