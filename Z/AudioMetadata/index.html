@@ -1,23 +1,26 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>MP3 Cover Tool PRO MAX</title>
+  <title>MP3 Cover Tool (iTunes Jugaad 😏)</title>
   <style>
-    body { font-family: Arial; padding: 20px; }
-    #progressBar { width: 100%; height: 25px; background: #ddd; }
-    #progress { height: 100%; width: 0%; background: green; }
-    #log { margin-top:10px; height:200px; overflow:auto; background:#111; color:#0f0; padding:10px; }
+    body { font-family: Arial; padding: 20px; background:#111; color:#fff; }
+    button { padding:10px; margin-top:10px; }
+    #progressBar { width:100%; height:25px; background:#333; margin-top:10px; }
+    #progress { height:100%; width:0%; background:#00ff88; }
+    #log { margin-top:15px; height:200px; overflow:auto; background:#000; color:#0f0; padding:10px; font-size:12px; }
   </style>
 </head>
 <body>
 
-<h2>MP3 Cover Tool (FIXED VERSION 😏)</h2>
+<h2>🔥 MP3 Cover Auto Adder (WORKING VERSION)</h2>
 
 <input type="file" id="fileInput" multiple accept=".mp3">
-<button onclick="processFiles()">Start</button>
+<br>
+<button onclick="processFiles()">Start Processing</button>
 
 <div id="progressBar"><div id="progress"></div></div>
 <p id="status">Waiting...</p>
+
 <div id="log"></div>
 
 <script src="https://unpkg.com/browser-id3-writer"></script>
@@ -25,32 +28,27 @@
 
 <script>
 
+// LOG FUNCTION
 function log(msg){
-  let box=document.getElementById("log");
-  box.innerHTML+=msg+"<br>";
-  box.scrollTop=box.scrollHeight;
+  let box = document.getElementById("log");
+  box.innerHTML += msg + "<br>";
+  box.scrollTop = box.scrollHeight;
 }
 
-// 🔥 REAL DDG IMAGE SEARCH
-async function getImage(query){
+// 🔥 iTunes Cover Fetch (Stable Jugaad)
+async function getCover(query){
   try{
-    // Step 1: get token
-    let res1=await fetch("https://duckduckgo.com/?q="+encodeURIComponent(query));
-    let text=await res1.text();
+    let res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&limit=1`);
+    let data = await res.json();
 
-    let vqd=text.match(/vqd='(.*?)'/);
-    if(!vqd) return null;
+    if(!data.results.length){
+      return null;
+    }
 
-    // Step 2: image API
-    let res2=await fetch(
-      `https://duckduckgo.com/i.js?l=us-en&o=json&q=${encodeURIComponent(query)}&vqd=${vqd[1]}`
-    );
+    let url = data.results[0].artworkUrl100;
 
-    let json=await res2.json();
-
-    if(!json.results.length) return null;
-
-    return json.results[0].image;
+    // HD upgrade 😏
+    return url.replace("100x100", "600x600");
 
   }catch(e){
     return null;
@@ -59,85 +57,92 @@ async function getImage(query){
 
 async function processFiles(){
 
-  let files=document.getElementById("fileInput").files;
-  let total=files.length;
+  let files = document.getElementById("fileInput").files;
+  let total = files.length;
 
   if(!total){
-    alert("Files daal pehle bhai 😭");
+    alert("Bhai file daal pehle 😭");
     return;
   }
 
-  let zip=new JSZip();
-  let success=0, fail=0, done=0;
+  let zip = new JSZip();
+
+  let done = 0, success = 0, fail = 0;
+
+  document.getElementById("status").innerText = "Processing started...";
 
   for(let file of files){
 
-    let name=file.name.replace(".mp3","");
-    let clean=name.replace(/[_-]+/g," ");
-    let query=clean+" official cover";
+    let name = file.name.replace(".mp3","");
+    let clean = name.replace(/[_-]+/g," ");
 
-    log("🔍 "+query);
+    log("🔍 Searching: " + clean);
 
     try{
 
-      let imgUrl=await getImage(query);
+      let coverUrl = await getCover(clean);
 
-      if(!imgUrl){
-        log("❌ no image: "+file.name);
+      if(!coverUrl){
+        log("❌ No cover found: " + file.name);
         fail++;
+        done++;
         continue;
       }
 
-      let img=await fetch(imgUrl);
-      let imgBuf=await img.arrayBuffer();
+      let imgRes = await fetch(coverUrl);
+      let imgBuffer = await imgRes.arrayBuffer();
 
-      let audio=await file.arrayBuffer();
+      let audioBuffer = await file.arrayBuffer();
 
-      let writer=new ID3Writer(audio);
-      writer.setFrame("TIT2",clean)
-            .setFrame("APIC",{
-              type:3,
-              data:imgBuf,
-              description:"cover"
+      let writer = new ID3Writer(audioBuffer);
+
+      writer.setFrame("TIT2", clean)
+            .setFrame("APIC", {
+              type: 3,
+              data: imgBuffer,
+              description: "cover"
             });
 
       writer.addTag();
 
-      let blob=writer.getBlob();
-      zip.file(file.name,blob);
+      let blob = writer.getBlob();
+
+      zip.file(file.name, blob);
 
       success++;
-      log("✅ done: "+file.name);
+      log("✅ Success: " + file.name);
 
-    }catch(e){
+    }catch(err){
       fail++;
-      log("💥 error: "+file.name);
+      log("💥 Error: " + file.name);
     }
 
     done++;
 
-    let percent=Math.round((done/total)*100);
-    document.getElementById("progress").style.width=percent+"%";
-    document.getElementById("status").innerText=
-      `Done ${done}/${total} | Success ${success} | Fail ${fail}`;
+    // PROGRESS UPDATE
+    let percent = Math.round((done / total) * 100);
+    document.getElementById("progress").style.width = percent + "%";
+
+    document.getElementById("status").innerText =
+      `Done: ${done}/${total} | Success: ${success} | Failed: ${fail}`;
   }
 
-  // ZIP FIX
-  if(success===0){
-    log("🚫 koi file process nahi hui. ZIP cancel.");
+  if(success === 0){
+    log("🚫 Kuch bhi process nahi hua. ZIP cancel.");
     return;
   }
 
-  log("📦 creating zip...");
+  log("📦 Creating ZIP...");
 
-  let content=await zip.generateAsync({type:"blob"});
+  let content = await zip.generateAsync({ type: "blob" });
 
-  let a=document.createElement("a");
-  a.href=URL.createObjectURL(content);
-  a.download="songs_with_cover.zip";
+  let a = document.createElement("a");
+  a.href = URL.createObjectURL(content);
+  a.download = "songs_with_cover.zip";
   a.click();
 
-  log("🎉 DONE BHAI 🔥");
+  log("🎉 DONE! Download started.");
+  document.getElementById("status").innerText = "All Done ✅";
 }
 
 </script>
