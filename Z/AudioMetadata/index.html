@@ -1,148 +1,146 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>MP3 Cover Tool (iTunes Jugaad 😏)</title>
-  <style>
-    body { font-family: Arial; padding: 20px; background:#111; color:#fff; }
-    button { padding:10px; margin-top:10px; }
-    #progressBar { width:100%; height:25px; background:#333; margin-top:10px; }
-    #progress { height:100%; width:0%; background:#00ff88; }
-    #log { margin-top:15px; height:200px; overflow:auto; background:#000; color:#0f0; padding:10px; font-size:12px; }
-  </style>
+<title>RKP Audio Cover Bot 😏🔥</title>
+<style>
+body { font-family: sans-serif; padding: 15px; }
+#log { background:#111; color:#0f0; padding:10px; height:200px; overflow:auto; }
+input { width: 90%; padding:8px; }
+button { padding:8px 12px; margin-top:5px; }
+</style>
 </head>
+
 <body>
 
-<h2>🔥 MP3 Cover Auto Adder (WORKING VERSION)</h2>
+<h2>🎵 RKP Audio Cover Bot</h2>
 
-<input type="file" id="fileInput" multiple accept=".mp3">
-<br>
-<button onclick="processFiles()">Start Processing</button>
+<input type="file" id="files" multiple accept=".mp3">
 
-<div id="progressBar"><div id="progress"></div></div>
-<p id="status">Waiting...</p>
+<h3>🔗 Paste Image URL</h3>
+<input type="text" id="imgInput">
+<button onclick="processImage()">Submit</button>
 
+<h3>📊 Logs</h3>
 <div id="log"></div>
-
-<script src="https://unpkg.com/browser-id3-writer"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
 
 <script>
 
-// LOG FUNCTION
-function log(msg){
-  let box = document.getElementById("log");
-  box.innerHTML += msg + "<br>";
-  box.scrollTop = box.scrollHeight;
+let files = [];
+let index = 0;
+
+const log = (msg) => {
+  document.getElementById("log").innerHTML += msg + "<br>";
+};
+
+document.getElementById("files").onchange = function(e){
+  files = Array.from(e.target.files);
+  index = 0;
+  nextFile();
+};
+
+function cleanName(name){
+  return name.replace(/\.[^/.]+$/, "");
 }
 
-// 🔥 iTunes Cover Fetch (Stable Jugaad)
-async function getCover(query){
-  try{
-    let res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&limit=1`);
-    let data = await res.json();
+function nextFile(){
 
-    if(!data.results.length){
-      return null;
-    }
-
-    let url = data.results[0].artworkUrl100;
-
-    // HD upgrade 😏
-    return url.replace("100x100", "600x600");
-
-  }catch(e){
-    return null;
-  }
-}
-
-async function processFiles(){
-
-  let files = document.getElementById("fileInput").files;
-  let total = files.length;
-
-  if(!total){
-    alert("Bhai file daal pehle 😭");
+  if(index >= files.length){
+    log("🎉 DONE ALL FILES");
     return;
   }
 
-  let zip = new JSZip();
+  let file = files[index];
+  let name = cleanName(file.name);
 
-  let done = 0, success = 0, fail = 0;
+  let search = encodeURIComponent(name + " official cover photo");
 
-  document.getElementById("status").innerText = "Processing started...";
+  log("🔍 Searching: " + name);
 
-  for(let file of files){
+  // delay then open google
+  setTimeout(()=>{
+    window.open("https://www.google.com/search?tbm=isch&q=" + search, "_blank");
+  },500);
+}
 
-    let name = file.name.replace(".mp3","");
-    let clean = name.replace(/[_-]+/g," ");
+async function processImage(){
 
-    log("🔍 Searching: " + clean);
+  let url = document.getElementById("imgInput").value;
 
-    try{
+  if(!url){
+    alert("URL daal bhai 😭");
+    return;
+  }
 
-      let coverUrl = await getCover(clean);
+  let file = files[index];
+  let name = cleanName(file.name);
 
-      if(!coverUrl){
-        log("❌ No cover found: " + file.name);
-        fail++;
-        done++;
-        continue;
+  try{
+
+    let finalURL = url;
+
+    // 🔥 CASE 1: Google imgres
+    if(url.includes("imgres")){
+      let u = new URL(url);
+      finalURL = decodeURIComponent(u.searchParams.get("imgurl"));
+      log("✅ Extracted imgurl");
+    }
+
+    // 🔥 CASE 2: Base64
+    if(finalURL.startsWith("data:image")){
+      log("⚡ Base64 detected");
+
+      let arr = finalURL.split(',');
+      let mime = arr[0].match(/:(.*?);/)[1];
+      let bstr = atob(arr[1]);
+      let n = bstr.length;
+      let u8arr = new Uint8Array(n);
+
+      while(n--){
+        u8arr[n] = bstr.charCodeAt(n);
       }
 
-      let imgRes = await fetch(coverUrl);
-      let imgBuffer = await imgRes.arrayBuffer();
+      let blob = new Blob([u8arr], {type:mime});
 
-      let audioBuffer = await file.arrayBuffer();
+      downloadBlob(blob, name);
+      return;
 
-      let writer = new ID3Writer(audioBuffer);
-
-      writer.setFrame("TIT2", clean)
-            .setFrame("APIC", {
-              type: 3,
-              data: imgBuffer,
-              description: "cover"
-            });
-
-      writer.addTag();
-
-      let blob = writer.getBlob();
-
-      zip.file(file.name, blob);
-
-      success++;
-      log("✅ Success: " + file.name);
-
-    }catch(err){
-      fail++;
-      log("💥 Error: " + file.name);
     }
 
-    done++;
+    // 🔥 CASE 3: Normal image
+    let res = await fetch(finalURL);
+    let blob = await res.blob();
 
-    // PROGRESS UPDATE
-    let percent = Math.round((done / total) * 100);
-    document.getElementById("progress").style.width = percent + "%";
+    if(blob.size < 1000){
+      throw "Invalid image";
+    }
 
-    document.getElementById("status").innerText =
-      `Done: ${done}/${total} | Success: ${success} | Failed: ${fail}`;
+    downloadBlob(blob, name);
+
+  }catch(e){
+    log("❌ Failed: " + name);
+    alert("Retry karo bhai 😭");
   }
 
-  if(success === 0){
-    log("🚫 Kuch bhi process nahi hua. ZIP cancel.");
-    return;
-  }
+}
 
-  log("📦 Creating ZIP...");
+function downloadBlob(blob, name){
 
-  let content = await zip.generateAsync({ type: "blob" });
+  let ext = blob.type.split("/")[1] || "jpg";
 
   let a = document.createElement("a");
-  a.href = URL.createObjectURL(content);
-  a.download = "songs_with_cover.zip";
+  a.href = URL.createObjectURL(blob);
+  a.download = name + "." + ext;
   a.click();
 
-  log("🎉 DONE! Download started.");
-  document.getElementById("status").innerText = "All Done ✅";
+  log("✅ Downloaded: " + name);
+
+  index++;
+  document.getElementById("imgInput").value = "";
+
+  setTimeout(()=>{
+    nextFile();
+  },1000);
+
 }
 
 </script>
