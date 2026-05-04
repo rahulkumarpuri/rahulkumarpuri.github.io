@@ -786,4 +786,199 @@ document.querySelectorAll('button, input, a, .upload-zone').forEach(el => {
   el.addEventListener('mouseleave', () => { cursor.style.transform = 'scale(1)'; cursorRing.style.opacity = '0.5'; });
 });
 
-// ── State ────────────────────────────────────────────────────
+// ── State ─────────────────────────────────────────────────────────────────────
+let files = [];
+let index = 0;
+let doneCount = 0;
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function getTime() {
+  return new Date().toTimeString().split(' ')[0];
+}
+
+function log(msg, type = 'info') {
+  const div = document.getElementById('log');
+  const line = document.createElement('div');
+  line.className = 'log-line';
+  line.innerHTML = `<span class="log-time">${getTime()}</span><span class="log-msg ${type}">${msg}</span>`;
+  div.appendChild(line);
+  div.scrollTop = div.scrollHeight;
+}
+
+function cleanName(name) {
+  return name.replace(/\.[^/.]+$/, '');
+}
+
+function updateStats() {
+  document.getElementById('stat-total').textContent = files.length || 0;
+  document.getElementById('stat-done').textContent = doneCount;
+  const rem = files.length - doneCount;
+  document.getElementById('stat-rem').textContent = files.length ? rem : '—';
+}
+
+function updateProgress() {
+  if (!files.length) return;
+  const pct = Math.round((doneCount / files.length) * 100);
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-pct').textContent = pct + '%';
+  document.getElementById('progress-wrap').classList.add('visible');
+}
+
+function renderFileList() {
+  const container = document.getElementById('file-list');
+  if (!files.length) {
+    container.innerHTML = '<div class="empty-state"><span class="empty-state-icon">📂</span>No files loaded yet</div>';
+    return;
+  }
+  container.innerHTML = '';
+  files.forEach((f, i) => {
+    const div = document.createElement('div');
+    div.className = 'file-item' + (i === index ? ' active' : '') + (i < index ? ' done' : '');
+    div.id = 'file-item-' + i;
+    div.innerHTML = `
+      <div class="file-num">${i < index ? '✓' : i + 1}</div>
+      <div class="file-name">${cleanName(f.name)}</div>
+      <div class="file-status">${i < index ? 'done' : i === index ? 'active' : 'queued'}</div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+function showNowPlaying(name) {
+  const el = document.getElementById('now-playing');
+  el.classList.add('visible');
+  document.getElementById('now-playing-name').textContent = name;
+}
+
+function setNowPlayingStep(step) {
+  document.getElementById('now-playing-step').textContent = step;
+}
+
+function hideNowPlaying() {
+  document.getElementById('now-playing').classList.remove('visible');
+}
+
+// ── File upload ───────────────────────────────────────────────────────────────
+const uploadZone = document.getElementById('upload-zone');
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('drag-over');
+  const dropped = Array.from(e.dataTransfer.files).filter(f => f.name.match(/\.(mp3|wav|flac|m4a)$/i));
+  if (dropped.length) loadFiles(dropped);
+});
+
+document.getElementById('files').onchange = function(e) {
+  loadFiles(Array.from(e.target.files));
+};
+
+function loadFiles(f) {
+  files = f;
+  index = 0;
+  doneCount = 0;
+  updateStats();
+  renderFileList();
+  updateProgress();
+  log(`Loaded ${files.length} file${files.length !== 1 ? 's' : ''} into queue.`, 'info');
+  nextFile();
+}
+
+// ── Queue navigation ──────────────────────────────────────────────────────────
+function nextFile() {
+  if (index >= files.length) {
+    log('🎉 All files complete!', 'success');
+    hideNowPlaying();
+    updateStats();
+    return;
+  }
+
+  const file = files[index];
+  const name = cleanName(file.name);
+  renderFileList();
+  showNowPlaying(name);
+  setNowPlayingStep('Searching');
+
+  log(`🔍 Opening search for: ${name}`, 'search');
+
+  setTimeout(() => {
+    const q = encodeURIComponent(name + ' official cover photo');
+    window.open('https://www.google.com/search?tbm=isch&q=' + q, '_blank');
+    setNowPlayingStep('Awaiting URL');
+  }, 500);
+}
+
+// ── Process image URL ─────────────────────────────────────────────────────────
+async function processImage() {
+  let url = document.getElementById('imgInput').value.trim();
+
+  if (!url) {
+    log('⚠️ No URL provided.', 'error');
+    document.getElementById('imgInput').focus();
+    return;
+  }
+
+  if (index >= files.length) {
+    log('⚠️ No active file in queue.', 'error');
+    return;
+  }
+
+  const file = files[index];
+  const name = cleanName(file.name);
+  setNowPlayingStep('Downloading');
+  log(`⬇️ Fetching cover for: ${name}`, 'info');
+
+  try {
+    let finalURL = url;
+
+    // Case 1: Google imgres
+    if (url.includes('imgres')) {
+      const u = new URL(url);
+      finalURL = decodeURIComponent(u.searchParams.get('imgurl'));
+      log('✅ Extracted imgurl from Google redirect.', 'success');
+    }
+
+    // Case 2: Base64
+    if (finalURL.startsWith('data:image')) {
+      log('⚡ Base64 data detected — processing...', 'info');
+      const arr = finalURL.split(',');
+      const mime = arr[0].match(/:(.*?);/)[1];
+      const bstr = atob(arr[1]);
+      let n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      while (n--) u8arr[n] = bstr.charCodeAt(n);
+      downloadBlob(new Blob([u8arr], { type: mime }), name);
+      return;
+    }
+
+    // Case 3: Normal URL
+    const res = await fetch(finalURL);
+    const blob = await res.blob();
+    if (blob.size < 1000) throw new Error('Image too small — likely invalid.');
+    downloadBlob(blob, name);
+
+  } catch (e) {
+    log(`❌ Failed for "${name}": ${e.message || e}`, 'error');
+    setNowPlayingStep('Error — Retry');
+  }
+}
+
+function downloadBlob(blob, name) {
+  const ext = blob.type.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg';
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name + '.' + ext;
+  a.click();
+
+  log(`✅ Saved: ${name}.${ext}`, 'success');
+  doneCount++;
+  index++;
+  updateStats();
+  updateProgress();
+  document.getElementById('imgInput').value = '';
+
+  setTimeout(() => { nextFile(); }, 800);
+}
+</script>
+</body>
+</html>
