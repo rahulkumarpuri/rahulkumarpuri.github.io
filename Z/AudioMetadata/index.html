@@ -10,16 +10,11 @@
 
 <style>
 
-*{
-  margin:0;
-  padding:0;
-  box-sizing:border-box;
-  font-family: 'Poppins', sans-serif;
-}
+*{margin:0;padding:0;box-sizing:border-box;font-family:Poppins}
 
 body{
   min-height:100vh;
-  background: linear-gradient(135deg,#0f0c29,#302b63,#24243e);
+  background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);
   display:flex;
   justify-content:center;
   align-items:center;
@@ -31,8 +26,8 @@ body{
   width:100%;
   max-width:520px;
   min-height:95vh;
-  backdrop-filter: blur(20px);
-  background: rgba(255,255,255,0.05);
+  backdrop-filter:blur(20px);
+  background:rgba(255,255,255,0.05);
   border-radius:20px;
   padding:20px;
   box-shadow:0 0 40px rgba(0,255,255,0.2);
@@ -43,13 +38,11 @@ body{
 h2{
   text-align:center;
   margin-bottom:10px;
-  font-weight:700;
   background:linear-gradient(90deg,#00f5ff,#ff00c8);
   -webkit-background-clip:text;
   -webkit-text-fill-color:transparent;
 }
 
-/* COUNTER */
 #counter{
   text-align:center;
   font-size:13px;
@@ -59,7 +52,16 @@ h2{
   border-radius:8px;
 }
 
-/* BUTTONS */
+input{
+  width:100%;
+  padding:12px;
+  border:none;
+  border-radius:12px;
+  background:rgba(255,255,255,0.1);
+  color:white;
+  margin-top:8px;
+}
+
 button{
   width:100%;
   padding:12px;
@@ -72,7 +74,6 @@ button{
   color:white;
 }
 
-/* LOG */
 #log{
   margin-top:10px;
   flex-grow:1;
@@ -82,17 +83,6 @@ button{
   border-radius:12px;
   font-size:12px;
   color:#0f0;
-}
-
-/* INPUT */
-input{
-  width:100%;
-  padding:12px;
-  border:none;
-  border-radius:12px;
-  background:rgba(255,255,255,0.1);
-  color:white;
-  margin-top:8px;
 }
 
 </style>
@@ -106,9 +96,9 @@ input{
 
 <div id="counter">No files loaded 😴</div>
 
-<input type="file" id="fileInput" accept=".mp3">
+<input type="file" id="fileInput" accept=".mp3" multiple>
 
-<button id="addBtn">➕ Upload Another File</button>
+<button id="addBtn">➕ Upload Selected Files</button>
 <button id="runBtn">🚀 Skip Uploading & Run</button>
 
 <input type="text" id="imgInput" placeholder="Paste image URL">
@@ -126,125 +116,125 @@ let index = 0;
 
 /* LOG */
 function log(msg){
-  let box = document.getElementById("log");
-  box.innerHTML += msg + "<br>";
-  box.scrollTop = box.scrollHeight;
+  let box=document.getElementById("log");
+  box.innerHTML+=msg+"<br>";
+  box.scrollTop=box.scrollHeight;
 }
 
-/* CLEAN NAME */
+/* CLEAN */
 function clean(name){
-  return name.replace(/\.[^/.]+$/, "");
+  return name.replace(/\.[^/.]+$/,"");
 }
 
-/* UPDATE COUNTER */
+/* COUNTER */
 function updateCounter(){
-  let total = fileNames.length;
-  let done = index;
-  let remain = total - done;
+  let total=fileNames.length;
+  let remain=total-index;
 
-  document.getElementById("counter").innerText =
-    `${total} Files loaded | ${done} completed | ${remain} remaining`;
+  document.getElementById("counter").innerText=
+    `${total} Files loaded | ${index} completed | ${remain} remaining`;
 }
 
-/* ADD FILE */
-document.getElementById("addBtn").onclick = function(){
-  let input = document.getElementById("fileInput");
+/* ADD MULTIPLE FILES 🔥 */
+document.getElementById("addBtn").onclick=function(){
 
-  if(input.files.length === 0){
+  let input=document.getElementById("fileInput");
+
+  if(input.files.length===0){
     alert("file select kar bhai 😏");
     return;
   }
 
-  let name = clean(input.files[0].name);
-  fileNames.push(name);
+  for(let f of input.files){
+    let name=clean(f.name);
 
-  log("➕ Added: " + name);
+    if(!fileNames.includes(name)){ // duplicate avoid
+      fileNames.push(name);
+      log("➕ Added: "+name);
+    }
+  }
 
   updateCounter();
-
-  input.value = "";
+  input.value="";
 };
 
 /* RUN */
-document.getElementById("runBtn").onclick = function(){
+document.getElementById("runBtn").onclick=function(){
 
-  if(fileNames.length === 0){
+  if(fileNames.length===0){
     alert("kuch to upload kar le bhai 💀");
     return;
   }
 
-  localStorage.setItem("rkp_names", JSON.stringify(fileNames));
-  localStorage.setItem("rkp_index", index);
-
-  log("🚀 Starting...");
+  localStorage.setItem("rkp_names",JSON.stringify(fileNames));
+  localStorage.setItem("rkp_index",index);
 
   next();
 };
 
-/* LOAD FROM CACHE */
+/* LOAD CACHE */
 function loadCache(){
 
-  let saved = localStorage.getItem("rkp_names");
+  let saved=localStorage.getItem("rkp_names");
 
   if(saved){
-    fileNames = JSON.parse(saved);
-    index = parseInt(localStorage.getItem("rkp_index")) || 0;
+    fileNames=JSON.parse(saved);
+    index=parseInt(localStorage.getItem("rkp_index"))||0;
 
-    log("♻️ Restored previous session");
+    log("♻️ Restored session");
     updateCounter();
   }
 }
 
-/* NEXT SEARCH */
+/* NEXT (AUTO REDIRECT SAME TAB) */
 function next(){
 
-  if(index >= fileNames.length){
+  if(index>=fileNames.length){
     log("🎉 DONE");
     return;
   }
 
-  let name = fileNames[index];
+  let name=fileNames[index];
 
-  let search = encodeURIComponent(name + " album cover");
+  let search=encodeURIComponent(name+" album cover");
 
-  log("🔍 " + name);
+  log("🔍 "+name);
 
-  /* SAME TAB REDIRECT 🔥 */
-  window.location.href = "https://www.google.com/search?tbm=isch&q=" + search;
+  window.location.href="https://www.google.com/search?tbm=isch&q="+search;
 }
 
-/* PROCESS IMAGE */
+/* DOWNLOAD */
 async function processImage(){
 
-  let url = document.getElementById("imgInput").value;
+  let url=document.getElementById("imgInput").value;
 
   if(!url){
     alert("URL daal 😏");
     return;
   }
 
-  let name = fileNames[index];
+  let name=fileNames[index];
 
-  let res = await fetch(url);
-  let blob = await res.blob();
+  let res=await fetch(url);
+  let blob=await res.blob();
 
-  let a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = name + ".jpg";
+  let a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download=name+".jpg";
   a.click();
 
-  log("✅ Saved: " + name);
+  log("✅ Saved: "+name);
 
   index++;
-  localStorage.setItem("rkp_index", index);
+  localStorage.setItem("rkp_index",index);
 
   updateCounter();
 
-  setTimeout(next, 800);
+  setTimeout(next,800);
 }
 
 /* INIT */
-window.onload = loadCache;
+window.onload=loadCache;
 
 </script>
 
