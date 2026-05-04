@@ -3,8 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>RKP Audio Cover Bot 🔥</title>
+<title>RKP File Collector 🔥</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
 
@@ -24,32 +23,20 @@ body{
 
 .container{
   width:100%;
-  max-width:520px;
-  min-height:95vh;
-  backdrop-filter:blur(20px);
+  max-width:500px;
   background:rgba(255,255,255,0.05);
+  backdrop-filter:blur(20px);
   border-radius:20px;
   padding:20px;
   box-shadow:0 0 40px rgba(0,255,255,0.2);
-  display:flex;
-  flex-direction:column;
 }
 
 h2{
   text-align:center;
-  margin-bottom:10px;
+  margin-bottom:15px;
   background:linear-gradient(90deg,#00f5ff,#ff00c8);
   -webkit-background-clip:text;
   -webkit-text-fill-color:transparent;
-}
-
-#counter{
-  text-align:center;
-  font-size:13px;
-  margin-bottom:10px;
-  background:rgba(255,255,255,0.05);
-  padding:6px;
-  border-radius:8px;
 }
 
 input{
@@ -59,7 +46,7 @@ input{
   border-radius:12px;
   background:rgba(255,255,255,0.1);
   color:white;
-  margin-top:8px;
+  margin-bottom:10px;
 }
 
 button{
@@ -68,21 +55,27 @@ button{
   border:none;
   border-radius:12px;
   margin-top:8px;
-  cursor:pointer;
-  font-weight:600;
   background:linear-gradient(90deg,#00f5ff,#ff00c8);
   color:white;
+  font-weight:600;
+  cursor:pointer;
 }
 
-#log{
+textarea{
+  width:100%;
+  height:120px;
   margin-top:10px;
-  flex-grow:1;
-  overflow:auto;
+  border-radius:12px;
   padding:10px;
   background:#000;
-  border-radius:12px;
-  font-size:12px;
   color:#0f0;
+  border:none;
+}
+
+#counter{
+  text-align:center;
+  margin-bottom:10px;
+  font-size:13px;
 }
 
 </style>
@@ -92,149 +85,92 @@ button{
 
 <div class="container">
 
-<h2>🎵 RKP Cover Bot</h2>
+<h2>🎵 RKP File Collector</h2>
 
-<div id="counter">No files loaded 😴</div>
+<div id="counter">0 files added</div>
 
-<input type="file" id="fileInput" accept=".mp3" multiple>
+<input type="file" id="fileInput" multiple accept=".mp3">
 
-<button id="addBtn">➕ Upload Selected Files</button>
-<button id="runBtn">🚀 Skip Uploading & Run</button>
+<button onclick="addFiles()">➕ Upload Selected Files</button>
+<button onclick="generateJSON()">🚀 Skip Uploading & Generate JSON</button>
 
-<input type="text" id="imgInput" placeholder="Paste image URL">
+<textarea id="jsonBox" placeholder="JSON will appear here..."></textarea>
 
-<button onclick="processImage()">⬇️ Download Cover</button>
-
-<div id="log"></div>
+<button onclick="copyJSON()">📋 Copy JSON & Go Next</button>
 
 </div>
 
 <script>
 
 let fileNames = [];
-let index = 0;
-
-/* LOG */
-function log(msg){
-  let box=document.getElementById("log");
-  box.innerHTML+=msg+"<br>";
-  box.scrollTop=box.scrollHeight;
-}
 
 /* CLEAN */
 function clean(name){
   return name.replace(/\.[^/.]+$/,"");
 }
 
-/* COUNTER */
-function updateCounter(){
-  let total=fileNames.length;
-  let remain=total-index;
+/* ADD FILES */
+function addFiles(){
 
-  document.getElementById("counter").innerText=
-    `${total} Files loaded | ${index} completed | ${remain} remaining`;
-}
+  let input = document.getElementById("fileInput");
 
-/* ADD MULTIPLE FILES 🔥 */
-document.getElementById("addBtn").onclick=function(){
-
-  let input=document.getElementById("fileInput");
-
-  if(input.files.length===0){
+  if(input.files.length === 0){
     alert("file select kar bhai 😏");
     return;
   }
 
   for(let f of input.files){
-    let name=clean(f.name);
+    let name = clean(f.name);
 
-    if(!fileNames.includes(name)){ // duplicate avoid
+    if(!fileNames.includes(name)){
       fileNames.push(name);
-      log("➕ Added: "+name);
     }
   }
 
-  updateCounter();
+  document.getElementById("counter").innerText =
+    fileNames.length + " files added";
+
   input.value="";
-};
-
-/* RUN */
-document.getElementById("runBtn").onclick=function(){
-
-  if(fileNames.length===0){
-    alert("kuch to upload kar le bhai 💀");
-    return;
-  }
-
-  localStorage.setItem("rkp_names",JSON.stringify(fileNames));
-  localStorage.setItem("rkp_index",index);
-
-  next();
-};
-
-/* LOAD CACHE */
-function loadCache(){
-
-  let saved=localStorage.getItem("rkp_names");
-
-  if(saved){
-    fileNames=JSON.parse(saved);
-    index=parseInt(localStorage.getItem("rkp_index"))||0;
-
-    log("♻️ Restored session");
-    updateCounter();
-  }
 }
 
-/* NEXT (AUTO REDIRECT SAME TAB) */
-function next(){
+/* GENERATE JSON */
+function generateJSON(){
 
-  if(index>=fileNames.length){
-    log("🎉 DONE");
+  if(fileNames.length === 0){
+    alert("kuch to upload kar 💀");
     return;
   }
 
-  let name=fileNames[index];
+  let json = JSON.stringify({
+    files: fileNames
+  }, null, 2);
 
-  let search=encodeURIComponent(name+" album cover");
+  document.getElementById("jsonBox").value = json;
 
-  log("🔍 "+name);
-
-  window.location.href="https://www.google.com/search?tbm=isch&q="+search;
-}
-
-/* DOWNLOAD */
-async function processImage(){
-
-  let url=document.getElementById("imgInput").value;
-
-  if(!url){
-    alert("URL daal 😏");
-    return;
-  }
-
-  let name=fileNames[index];
-
-  let res=await fetch(url);
-  let blob=await res.blob();
-
-  let a=document.createElement("a");
-  a.href=URL.createObjectURL(blob);
-  a.download=name+".jpg";
+  /* DOWNLOAD FILE */
+  let blob = new Blob([json], {type:"application/json"});
+  let a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "files.json";
   a.click();
-
-  log("✅ Saved: "+name);
-
-  index++;
-  localStorage.setItem("rkp_index",index);
-
-  updateCounter();
-
-  setTimeout(next,800);
 }
 
-/* INIT */
-window.onload=loadCache;
+/* COPY + REDIRECT */
+function copyJSON(){
+
+  let text = document.getElementById("jsonBox").value;
+
+  if(!text){
+    alert("pehle JSON generate kar 😏");
+    return;
+  }
+
+  navigator.clipboard.writeText(text).then(()=>{
+    alert("Copied bro 😎");
+    window.location.href = "download.html";
+  });
+
+}
 
 </script>
 
