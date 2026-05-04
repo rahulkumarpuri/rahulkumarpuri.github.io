@@ -1,22 +1,24 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>RKP Bot FIXED 😏🔥</title>
+<title>RKP Cover Bot PRO 😏🔥</title>
 <style>
-body { font-family:sans-serif; padding:15px; }
+body { font-family: sans-serif; padding:15px; }
 #log { background:#111; color:#0f0; height:200px; overflow:auto; padding:10px; }
+input { width:90%; padding:8px; }
 </style>
 </head>
 
 <body>
 
-<h2>🎵 RKP Bot (Fixed)</h2>
+<h2>🔥 RKP Audio Cover Bot PRO</h2>
 
 <input type="file" id="files" multiple accept=".mp3">
-<p id="status"></p>
+<br><br>
 
-<input type="text" id="imgInput" placeholder="Paste Image URL">
+<input type="text" id="imgInput" placeholder="Paste image URL here">
 
+<h3>📊 Logs</h3>
 <div id="log"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
@@ -26,103 +28,82 @@ body { font-family:sans-serif; padding:15px; }
 let files = [];
 let index = 0;
 let images = [];
-let logs = [];
-let zip = new JSZip();
+let cacheKey = "rkp_cache";
 
-function log(msg){
-  logs.push(msg);
-  document.getElementById("log").innerHTML = logs.join("<br>");
-  saveCache();
-}
+const log = (msg)=>{
+  document.getElementById("log").innerHTML += msg+"<br>";
+};
 
 function saveCache(){
-  localStorage.setItem("rkp_cache", JSON.stringify({
+  localStorage.setItem(cacheKey, JSON.stringify({
+    files: files.map(f=>f.name),
     index,
     images,
-    logs,
     time: Date.now()
   }));
 }
 
 function loadCache(){
-  let data = JSON.parse(localStorage.getItem("rkp_cache"));
+  let data = localStorage.getItem(cacheKey);
   if(!data) return;
 
-  if(Date.now() - data.time > 7*24*60*60*1000){
-    localStorage.removeItem("rkp_cache");
+  let obj = JSON.parse(data);
+
+  // expire 7 days
+  if(Date.now() - obj.time > 7*24*60*60*1000){
+    localStorage.removeItem(cacheKey);
     return;
   }
 
-  index = data.index || 0;
-  images = data.images || [];
-  logs = data.logs || [];
+  index = obj.index;
+  images = obj.images;
 
-  document.getElementById("log").innerHTML = logs.join("<br>");
-  log("♻️ Restored");
-
+  log("♻️ Cache restored");
 }
 
 loadCache();
 
-document.getElementById("files").onchange = (e)=>{
+document.getElementById("files").onchange = function(e){
   files = Array.from(e.target.files);
   index = 0;
   images = [];
-  logs = [];
   nextFile();
 };
 
-function cleanName(n){
-  return n.replace(/\.[^/.]+$/, "");
+function cleanName(name){
+  return name.replace(/\.[^/.]+$/, "");
 }
 
 function nextFile(){
 
   if(index >= files.length){
     log("📦 Creating ZIP...");
-
-    images.forEach(img=>{
-      zip.file(img.name, img.blob);
-    });
-
-    zip.generateAsync({type:"blob"}).then(content=>{
-      let a=document.createElement("a");
-      a.href=URL.createObjectURL(content);
-      a.download="covers.zip";
-      a.click();
-      log("🎉 DONE");
-    });
-
+    createZip();
     return;
   }
 
   let name = cleanName(files[index].name);
 
-  document.getElementById("status").innerText =
-    `Processing ${index+1}/${files.length} → ${name}`;
+  log("🔍 Searching: " + name);
 
-  log("🔍 " + name);
+  let search = encodeURIComponent(name + " official cover photo");
 
   setTimeout(()=>{
-    window.location.href =
-      "https://www.google.com/search?tbm=isch&q=" +
-      encodeURIComponent(name + " official cover");
+    window.open("https://www.google.com/search?tbm=isch&q="+search, "_blank");
   },500);
 }
 
-// 🔥 PASTE FIX
-document.getElementById("imgInput").addEventListener("paste", (e)=>{
-  setTimeout(()=> processImage(), 200);
+// 🔥 AUTO SUBMIT ON PASTE
+document.getElementById("imgInput").addEventListener("paste", function(e){
+
+  setTimeout(()=>{
+    let url = e.target.value;
+    processImage(url);
+  },200);
+
 });
 
-async function processImage(){
-
-  let url = document.getElementById("imgInput").value.trim();
-
-  if(!url){
-    log("❌ Empty URL");
-    return;
-  }
+async function processImage(url){
 
   let name = cleanName(files[index].name);
 
@@ -130,51 +111,74 @@ async function processImage(){
 
     let finalURL = url;
 
+    // Google imgres fix
     if(url.includes("imgres")){
       let u = new URL(url);
       finalURL = decodeURIComponent(u.searchParams.get("imgurl"));
+      log("✅ Extracted imgurl");
     }
 
-    let blob;
-
+    // Base64
     if(finalURL.startsWith("data:image")){
-
       let arr = finalURL.split(',');
       let mime = arr[0].match(/:(.*?);/)[1];
       let bstr = atob(arr[1]);
-      let u8arr = new Uint8Array(bstr.length);
+      let n = bstr.length;
+      let u8arr = new Uint8Array(n);
 
-      for(let i=0;i<bstr.length;i++){
-        u8arr[i] = bstr.charCodeAt(i);
-      }
+      while(n--) u8arr[n] = bstr.charCodeAt(n);
 
-      blob = new Blob([u8arr], {type:mime});
+      images.push({name, blob:new Blob([u8arr], {type:mime})});
 
-    }else{
+    } else {
 
       let res = await fetch(finalURL);
-      blob = await res.blob();
+      let blob = await res.blob();
 
-      if(blob.size < 1000) throw "Invalid";
+      if(blob.size < 1000) throw "bad image";
+
+      images.push({name, blob});
     }
 
-    let ext = blob.type.split("/")[1] || "jpg";
-
-    images.push({name: name+"."+ext, blob});
-
-    log("✅ Saved: " + name);
-
-    document.getElementById("imgInput").value = "";
+    log("✅ Added: " + name);
 
     index++;
     saveCache();
 
-    setTimeout(nextFile, 500);
+    document.getElementById("imgInput").value = "";
+
+    nextFile();
 
   }catch(e){
-    log("❌ Failed → retry");
+    log("❌ Failed: " + name);
+    alert("Retry kar bhai 😭");
+  }
+}
+
+async function createZip(){
+
+  if(images.length === 0){
+    log("🚫 No images");
+    return;
   }
 
+  let zip = new JSZip();
+
+  images.forEach(img=>{
+    let ext = img.blob.type.split("/")[1] || "jpg";
+    zip.file(img.name+"."+ext, img.blob);
+  });
+
+  let content = await zip.generateAsync({type:"blob"});
+
+  let a = document.createElement("a");
+  a.href = URL.createObjectURL(content);
+  a.download = "RKP_Covers.zip";
+  a.click();
+
+  log("🎉 ZIP Download Ready!");
+
+  localStorage.removeItem(cacheKey);
 }
 
 </script>
