@@ -89,9 +89,9 @@ textarea{
 
 <div id="counter">0 files added</div>
 
+<!-- 🔥 FILE INPUT (AUTO ADD) -->
 <input type="file" id="fileInput" multiple accept=".mp3">
 
-<button onclick="addFiles()">➕ Upload Selected Files</button>
 <button onclick="generateJSON()">🚀 Skip Uploading & Generate JSON</button>
 
 <textarea id="jsonBox" placeholder="JSON will appear here..."></textarea>
@@ -109,17 +109,14 @@ function clean(name){
   return name.replace(/\.[^/.]+$/,"");
 }
 
-/* ADD FILES */
-function addFiles(){
+/* 🔥 AUTO ADD ON SELECT */
+document.getElementById("fileInput").onchange = function(e){
 
-  let input = document.getElementById("fileInput");
+  let files = Array.from(e.target.files);
 
-  if(input.files.length === 0){
-    alert("file select kar bhai 😏");
-    return;
-  }
+  if(files.length === 0) return;
 
-  for(let f of input.files){
+  for(let f of files){
     let name = clean(f.name);
 
     if(!fileNames.includes(name)){
@@ -130,8 +127,8 @@ function addFiles(){
   document.getElementById("counter").innerText =
     fileNames.length + " files added";
 
-  input.value="";
-}
+  this.value = ""; // reset so same file dubara select ho sake 😏
+};
 
 /* GENERATE JSON */
 function generateJSON(){
@@ -147,7 +144,6 @@ function generateJSON(){
 
   document.getElementById("jsonBox").value = json;
 
-  /* DOWNLOAD FILE */
   let blob = new Blob([json], {type:"application/json"});
   let a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
@@ -167,7 +163,7 @@ function copyJSON(){
 
   navigator.clipboard.writeText(text).then(()=>{
     alert("Copied bro 😎");
-    window.location.href = "Download";
+    window.location.href = "download.html";
   });
 
 }
