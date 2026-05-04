@@ -1,93 +1,139 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>RKP Audio Cover Bot 😏🔥</title>
+<title>RKP Audio Cover Bot 🔥</title>
 <style>
-body { font-family: sans-serif; padding: 15px; }
-#log { background:#111; color:#0f0; padding:10px; height:200px; overflow:auto; }
-input { width: 90%; padding:8px; }
-button { padding:8px 12px; margin-top:5px; }
+body { font-family: sans-serif; padding:15px; }
+#log { background:#111; color:#0f0; height:200px; overflow:auto; padding:10px; }
+input { width:95%; padding:8px; }
 </style>
 </head>
 
 <body>
 
-<h2>🎵 RKP Audio Cover Bot</h2>
+<h2>🎵 RKP Bot (Final Version 😏)</h2>
 
 <input type="file" id="files" multiple accept=".mp3">
 
 <h3>🔗 Paste Image URL</h3>
-<input type="text" id="imgInput">
-<button onclick="processImage()">Submit</button>
+<input type="text" id="imgInput" placeholder="Paste here...">
 
 <h3>📊 Logs</h3>
 <div id="log"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
 
 <script>
 
 let files = [];
 let index = 0;
+let images = [];
+let zip = new JSZip();
 
-const log = (msg) => {
+// 🧠 LOG
+function log(msg){
   document.getElementById("log").innerHTML += msg + "<br>";
-};
+}
 
+// 🧠 CACHE SAVE
+function saveCache(){
+  let data = {
+    files: files.map(f => f.name),
+    index: index,
+    images: images,
+    time: Date.now()
+  };
+  localStorage.setItem("rkp_cache", JSON.stringify(data));
+}
+
+// 🧠 CACHE LOAD
+function loadCache(){
+  let data = JSON.parse(localStorage.getItem("rkp_cache"));
+  if(!data) return;
+
+  if(Date.now() - data.time > 7*24*60*60*1000){
+    localStorage.removeItem("rkp_cache");
+    return;
+  }
+
+  index = data.index || 0;
+  images = data.images || [];
+
+  log("♻️ Cache restored");
+}
+
+loadCache();
+
+// 🧠 FILE INPUT
 document.getElementById("files").onchange = function(e){
   files = Array.from(e.target.files);
   index = 0;
+  images = [];
   nextFile();
 };
 
-function cleanName(name){
-  return name.replace(/\.[^/.]+$/, "");
+// 🧠 CLEAN NAME
+function cleanName(n){
+  return n.replace(/\.[^/.]+$/, "");
 }
 
+// 🧠 NEXT FILE
 function nextFile(){
 
   if(index >= files.length){
-    log("🎉 DONE ALL FILES");
+    log("📦 Creating ZIP...");
+
+    images.forEach(img => {
+      zip.file(img.name, img.blob);
+    });
+
+    zip.generateAsync({type:"blob"}).then(content=>{
+      let a = document.createElement("a");
+      a.href = URL.createObjectURL(content);
+      a.download = "covers.zip";
+      a.click();
+      log("🎉 DONE!");
+    });
+
     return;
   }
 
-  let file = files[index];
-  let name = cleanName(file.name);
+  let name = cleanName(files[index].name);
 
-  let search = encodeURIComponent(name + " official cover photo");
+  let search = encodeURIComponent(name + " official cover");
 
-  log("🔍 Searching: " + name);
+  log("🔍 " + name);
 
-  // delay then open google
   setTimeout(()=>{
-    window.open("https://www.google.com/search?tbm=isch&q=" + search, "_blank");
+    window.location.href = "https://www.google.com/search?tbm=isch&q=" + search;
   },500);
 }
 
+// 🧠 AUTO SUBMIT (paste detect)
+document.getElementById("imgInput").addEventListener("input", ()=>{
+  if(document.getElementById("imgInput").value.length > 10){
+    processImage();
+  }
+});
+
+// 🧠 PROCESS IMAGE
 async function processImage(){
 
   let url = document.getElementById("imgInput").value;
-
-  if(!url){
-    alert("URL daal bhai 😭");
-    return;
-  }
-
-  let file = files[index];
-  let name = cleanName(file.name);
+  let name = cleanName(files[index].name);
 
   try{
 
     let finalURL = url;
 
-    // 🔥 CASE 1: Google imgres
+    // GOOGLE LINK FIX
     if(url.includes("imgres")){
       let u = new URL(url);
       finalURL = decodeURIComponent(u.searchParams.get("imgurl"));
-      log("✅ Extracted imgurl");
     }
 
-    // 🔥 CASE 2: Base64
+    // BASE64
     if(finalURL.startsWith("data:image")){
-      log("⚡ Base64 detected");
 
       let arr = finalURL.split(',');
       let mime = arr[0].match(/:(.*?);/)[1];
@@ -101,46 +147,36 @@ async function processImage(){
 
       let blob = new Blob([u8arr], {type:mime});
 
-      downloadBlob(blob, name);
-      return;
+      images.push({name: name + ".jpg", blob});
+      log("✅ Saved (base64)");
+
+    }else{
+
+      let res = await fetch(finalURL);
+      let blob = await res.blob();
+
+      if(blob.size < 1000) throw "Invalid";
+
+      let ext = blob.type.split("/")[1] || "jpg";
+
+      images.push({name: name + "." + ext, blob});
+      log("✅ Saved");
 
     }
-
-    // 🔥 CASE 3: Normal image
-    let res = await fetch(finalURL);
-    let blob = await res.blob();
-
-    if(blob.size < 1000){
-      throw "Invalid image";
-    }
-
-    downloadBlob(blob, name);
 
   }catch(e){
-    log("❌ Failed: " + name);
-    alert("Retry karo bhai 😭");
+    log("❌ Failed → retry");
+    return;
   }
 
-}
-
-function downloadBlob(blob, name){
-
-  let ext = blob.type.split("/")[1] || "jpg";
-
-  let a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = name + "." + ext;
-  a.click();
-
-  log("✅ Downloaded: " + name);
+  document.getElementById("imgInput").value = "";
 
   index++;
-  document.getElementById("imgInput").value = "";
+  saveCache();
 
   setTimeout(()=>{
     nextFile();
-  },1000);
-
+  },800);
 }
 
 </script>
