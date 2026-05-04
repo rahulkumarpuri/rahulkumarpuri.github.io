@@ -31,15 +31,12 @@ body{
   width:100%;
   max-width:500px;
   min-height:95vh;
-
   backdrop-filter: blur(20px);
   background: rgba(255,255,255,0.05);
   border-radius:20px;
   padding:20px;
-
   box-shadow:0 0 40px rgba(0,255,255,0.2);
   border:1px solid rgba(255,255,255,0.1);
-
   display:flex;
   flex-direction:column;
 }
@@ -53,15 +50,19 @@ h2{
   -webkit-text-fill-color:transparent;
 }
 
-/* 🔥 COUNTER STYLE */
 #counter{
   text-align:center;
   font-size:13px;
-  margin-bottom:15px;
+  margin-bottom:10px;
   opacity:0.8;
   background: rgba(255,255,255,0.05);
   padding:6px;
   border-radius:8px;
+}
+
+#resumeBtn{
+  display:none;
+  margin-bottom:10px;
 }
 
 label{
@@ -69,8 +70,7 @@ label{
   opacity:0.8;
 }
 
-input[type="file"],
-input[type="text"]{
+input,button{
   width:100%;
   margin-top:8px;
   margin-bottom:15px;
@@ -78,31 +78,21 @@ input[type="text"]{
   border:none;
   outline:none;
   border-radius:12px;
+}
+
+input{
   background:rgba(255,255,255,0.1);
   color:white;
-  font-size:14px;
 }
 
 button{
-  width:100%;
-  padding:14px;
-  border:none;
-  border-radius:12px;
-  cursor:pointer;
-  font-weight:600;
-  font-size:15px;
   background:linear-gradient(90deg,#00f5ff,#ff00c8);
   color:white;
-  transition:0.3s;
-}
-
-button:hover{
-  transform:scale(1.03);
-  box-shadow:0 0 15px #00f5ff;
+  font-weight:600;
+  cursor:pointer;
 }
 
 #log{
-  margin-top:15px;
   flex-grow:1;
   overflow:auto;
   padding:10px;
@@ -113,38 +103,6 @@ button:hover{
   color:#0f0;
 }
 
-#log::-webkit-scrollbar{
-  width:6px;
-}
-#log::-webkit-scrollbar-thumb{
-  background:#00f5ff;
-  border-radius:10px;
-}
-
-.glow{
-  animation: glow 2s infinite alternate;
-}
-
-@keyframes glow{
-  from{ text-shadow:0 0 5px #00f5ff;}
-  to{ text-shadow:0 0 20px #ff00c8;}
-}
-
-@media (max-width:480px){
-  .container{
-    border-radius:15px;
-    padding:15px;
-  }
-
-  h2{
-    font-size:18px;
-  }
-
-  button{
-    font-size:14px;
-  }
-}
-
 </style>
 </head>
 
@@ -152,15 +110,17 @@ button:hover{
 
 <div class="container">
 
-<h2 class="glow">🎵 RKP Cover Bot</h2>
+<h2>🎵 RKP Cover Bot</h2>
 
 <div id="counter">No files loaded 😴</div>
+
+<button id="resumeBtn">🔁 Resume Previous Session</button>
 
 <label>Select Audio Files</label>
 <input type="file" id="files" multiple accept=".mp3">
 
 <label>Paste Image URL</label>
-<input type="text" id="imgInput" placeholder="Paste image link here...">
+<input type="text" id="imgInput">
 
 <button onclick="processImage()">🚀 Submit</button>
 
@@ -172,42 +132,79 @@ button:hover{
 
 let files = [];
 let index = 0;
+let savedTotal = 0;
 
-/* 🔥 COUNTER FUNCTION */
-function updateCounter(){
-  let total = files.length;
-  let completed = index;
-  let remaining = total - completed;
-
-  let text = total === 0 
-    ? "No files loaded 😴"
-    : `${total} Files loaded | ${completed} completed | ${remaining} remaining`;
-
-  document.getElementById("counter").innerText = text;
+/* 🔥 SAVE STATE */
+function saveState(){
+  localStorage.setItem("rkp_index", index);
+  localStorage.setItem("rkp_total", files.length);
 }
 
+/* 🔥 LOAD STATE */
+function loadState(){
+  let i = localStorage.getItem("rkp_index");
+  let t = localStorage.getItem("rkp_total");
+
+  if(i !== null && t !== null){
+    index = parseInt(i);
+    savedTotal = parseInt(t);
+
+    document.getElementById("counter").innerText =
+      `${savedTotal} Files loaded | ${index} completed | ${savedTotal - index} remaining`;
+
+    document.getElementById("resumeBtn").style.display = "block";
+  }
+}
+
+/* 🔥 COUNTER */
+function updateCounter(){
+  let total = files.length;
+  let remaining = total - index;
+
+  document.getElementById("counter").innerText =
+    `${total} Files loaded | ${index} completed | ${remaining} remaining`;
+}
+
+/* 🔥 LOG */
 const log = (msg) => {
-  let logBox = document.getElementById("log");
-  logBox.innerHTML += msg + "<br>";
-  logBox.scrollTop = logBox.scrollHeight;
+  let box = document.getElementById("log");
+  box.innerHTML += msg + "<br>";
+  box.scrollTop = box.scrollHeight;
 };
 
+/* 🔥 FILE SELECT */
 document.getElementById("files").onchange = function(e){
   files = Array.from(e.target.files);
-  index = 0;
-  updateCounter(); // 🔥 update
+
+  if(index > files.length) index = 0;
+
+  updateCounter();
+  saveState();
+};
+
+/* 🔥 RESUME */
+document.getElementById("resumeBtn").onclick = function(){
+  if(files.length === 0){
+    alert("Pehle files select kar bhai 😏");
+    return;
+  }
+
+  log("🔁 Resuming from: " + index);
+  this.style.display = "none";
   nextFile();
 };
 
+/* 🔥 CLEAN NAME */
 function cleanName(name){
   return name.replace(/\.[^/.]+$/, "");
 }
 
+/* 🔥 NEXT FILE */
 function nextFile(){
 
   if(index >= files.length){
     log("🎉 DONE ALL FILES");
-    updateCounter(); // 🔥 final update
+    localStorage.clear();
     return;
   }
 
@@ -223,6 +220,7 @@ function nextFile(){
   },600);
 }
 
+/* 🔥 PROCESS IMAGE */
 async function processImage(){
 
   let url = document.getElementById("imgInput").value;
@@ -232,8 +230,7 @@ async function processImage(){
     return;
   }
 
-  let file = files[index];
-  let name = cleanName(file.name);
+  let name = cleanName(files[index].name);
 
   try{
 
@@ -242,42 +239,19 @@ async function processImage(){
     if(url.includes("imgres")){
       let u = new URL(url);
       finalURL = decodeURIComponent(u.searchParams.get("imgurl"));
-      log("✅ Extracted imgurl");
-    }
-
-    if(finalURL.startsWith("data:image")){
-      log("⚡ Base64 detected");
-
-      let arr = finalURL.split(',');
-      let mime = arr[0].match(/:(.*?);/)[1];
-      let bstr = atob(arr[1]);
-      let n = bstr.length;
-      let u8arr = new Uint8Array(n);
-
-      while(n--){
-        u8arr[n] = bstr.charCodeAt(n);
-      }
-
-      let blob = new Blob([u8arr], {type:mime});
-      downloadBlob(blob, name);
-      return;
     }
 
     let res = await fetch(finalURL);
     let blob = await res.blob();
 
-    if(blob.size < 1000){
-      throw "Invalid image";
-    }
-
     downloadBlob(blob, name);
 
   }catch(e){
-    log("❌ Failed: " + name);
-    alert("Retry karo bhai 😭");
+    log("❌ Failed");
   }
 }
 
+/* 🔥 DOWNLOAD */
 function downloadBlob(blob, name){
 
   let ext = blob.type.split("/")[1] || "jpg";
@@ -290,14 +264,16 @@ function downloadBlob(blob, name){
   log("✅ Downloaded: " + name);
 
   index++;
-  updateCounter(); // 🔥 update
+  updateCounter();
+  saveState();
 
   document.getElementById("imgInput").value = "";
 
-  setTimeout(()=>{
-    nextFile();
-  },1000);
+  setTimeout(nextFile, 800);
 }
+
+/* 🔥 LOAD ON START */
+window.onload = loadState;
 
 </script>
 
