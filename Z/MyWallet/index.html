@@ -1,0 +1,1372 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Salary Pulse — Live Salary Tracker</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://unpkg.com/framer-motion/dist/framer-motion.umd.js"></script>
+  <script src="https://unpkg.com/lucide-react@latest/dist/umd/lucide-react.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ['Inter', 'ui-sans-serif', 'system-ui'],
+          },
+          boxShadow: {
+            glow: '0 0 60px rgba(99,102,241,.35)',
+            gold: '0 0 50px rgba(245,158,11,.25)',
+            emerald: '0 0 50px rgba(16,185,129,.25)',
+          },
+          animation: {
+            float: 'float 7s ease-in-out infinite',
+            shimmer: 'shimmer 2.8s linear infinite',
+            pulseSoft: 'pulseSoft 2.8s ease-in-out infinite',
+          },
+          keyframes: {
+            float: {
+              '0%,100%': { transform: 'translateY(0px)' },
+              '50%': { transform: 'translateY(-18px)' },
+            },
+            shimmer: {
+              '0%': { backgroundPosition: '-200% 0' },
+              '100%': { backgroundPosition: '200% 0' },
+            },
+            pulseSoft: {
+              '0%,100%': { opacity: '.72', transform: 'scale(1)' },
+              '50%': { opacity: '1', transform: 'scale(1.04)' },
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 15% 10%, rgba(99,102,241,.30), transparent 30%),
+        radial-gradient(circle at 85% 5%, rgba(236,72,153,.24), transparent 26%),
+        radial-gradient(circle at 50% 90%, rgba(16,185,129,.18), transparent 35%),
+        linear-gradient(135deg, #050816 0%, #090b1f 40%, #101126 100%);
+      color: white;
+      overflow-x: hidden;
+    }
+    .glass {
+      background: linear-gradient(135deg, rgba(255,255,255,.12), rgba(255,255,255,.045));
+      border: 1px solid rgba(255,255,255,.14);
+      box-shadow: 0 24px 80px rgba(0,0,0,.32);
+      backdrop-filter: blur(24px);
+    }
+    .glass-strong {
+      background: linear-gradient(135deg, rgba(255,255,255,.18), rgba(255,255,255,.06));
+      border: 1px solid rgba(255,255,255,.20);
+      box-shadow: 0 30px 100px rgba(0,0,0,.42);
+      backdrop-filter: blur(30px);
+    }
+    .premium-text {
+      background: linear-gradient(90deg, #fff, #c7d2fe, #fbcfe8, #fde68a, #a7f3d0, #fff);
+      background-size: 220% auto;
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      animation: shimmer 7s linear infinite;
+    }
+    .premium-border {
+      position: relative;
+      overflow: hidden;
+    }
+    .premium-border::before {
+      content: "";
+      position: absolute;
+      inset: -2px;
+      background: conic-gradient(from 180deg, rgba(99,102,241,.0), rgba(99,102,241,.8), rgba(236,72,153,.75), rgba(245,158,11,.65), rgba(16,185,129,.7), rgba(99,102,241,.0));
+      z-index: -2;
+      animation: spin 9s linear infinite;
+    }
+    .premium-border::after {
+      content: "";
+      position: absolute;
+      inset: 1px;
+      border-radius: inherit;
+      background: linear-gradient(135deg, rgba(15,23,42,.88), rgba(17,24,39,.72));
+      z-index: -1;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    input[type="time"], input[type="date"], input[type="number"], input[type="text"], select {
+      color-scheme: dark;
+    }
+    .money-shadow {
+      text-shadow: 0 0 34px rgba(16,185,129,.28);
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useEffect, useMemo, useRef, useState } = React;
+    const { motion, AnimatePresence } = window.Motion;
+    const {
+      Clock, CalendarDays, IndianRupee, Timer, BriefcaseBusiness, Sparkles, Settings,
+      Download, Upload, History, Plus, Minus, Moon, Sun, Coffee, ShieldCheck, Trash2,
+      Save, Play, Pause, RotateCcw, FileJson, BadgeCheck, Wallet, TrendingUp, Zap,
+      ChevronRight, ChevronDown, X, AlertTriangle, CheckCircle2, Hourglass, CalendarX,
+      PlaneTakeoff, Layers, Activity, Database, Smartphone, Flame, Crown, Gauge,
+      BarChart3, Search, Filter, Copy, Info, Undo2, Edit3, Coins, Target, Rocket
+    } = lucideReact;
+
+    const STORAGE_KEY = "salary-pulse-premium-cache-v1";
+    const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
+
+    const defaultSetup = {
+      shiftStart: "10:00",
+      shiftEnd: "20:00",
+      monthlySalary: 18000,
+      overtimeRate: 120,
+      startDate: new Date().toISOString().slice(0,10)
+    };
+
+    const defaultState = {
+      setupDone: false,
+      setup: defaultSetup,
+      segments: [],
+      events: [],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      theme: "royal",
+      currency: "₹"
+    };
+
+    const pad = n => String(n).padStart(2, "0");
+    const todayKey = (d = new Date()) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+    const prettyDate = key => {
+      const [y,m,d] = key.split("-").map(Number);
+      return new Date(y, m-1, d).toLocaleDateString("en-IN", { day:"2-digit", month:"short", year:"numeric" });
+    };
+    const parseTime = t => {
+      const [h,m] = String(t || "00:00").split(":").map(Number);
+      return { h: h || 0, m: m || 0 };
+    };
+    const minutesOf = t => {
+      const {h,m} = parseTime(t);
+      return h * 60 + m;
+    };
+    const dateFromKey = key => {
+      const [y,m,d] = key.split("-").map(Number);
+      return new Date(y, m-1, d);
+    };
+    const addDays = (date, days) => {
+      const d = new Date(date);
+      d.setDate(d.getDate() + days);
+      return d;
+    };
+    const formatMoney = (n, max = 2) => {
+      const value = Number.isFinite(n) ? n : 0;
+      return value.toLocaleString("en-IN", { maximumFractionDigits: max, minimumFractionDigits: max === 0 ? 0 : 2 });
+    };
+    const msToHMS = ms => {
+      const safe = Math.max(0, Math.floor(ms / 1000));
+      const h = Math.floor(safe / 3600);
+      const m = Math.floor((safe % 3600) / 60);
+      const s = safe % 60;
+      return `${pad(h)}:${pad(m)}:${pad(s)}`;
+    };
+    const hmFromMinutes = mins => {
+      const h = Math.floor(mins / 60);
+      const m = Math.floor(mins % 60);
+      return `${h}h ${m}m`;
+    };
+    const clamp = (n,a,b) => Math.max(a, Math.min(b,n));
+
+    function getShiftWindow(dateKey, setup) {
+      const base = dateFromKey(dateKey);
+      const s = parseTime(setup.shiftStart);
+      const e = parseTime(setup.shiftEnd);
+      const start = new Date(base);
+      start.setHours(s.h, s.m, 0, 0);
+      const end = new Date(base);
+      end.setHours(e.h, e.m, 0, 0);
+      if (end <= start) end.setDate(end.getDate() + 1);
+      return { start, end };
+    }
+
+    function getDailyShiftHours(setup) {
+      let mins = minutesOf(setup.shiftEnd) - minutesOf(setup.shiftStart);
+      if (mins <= 0) mins += 1440;
+      return mins / 60;
+    }
+
+    function getHourlyRate(setup) {
+      const dailyHours = getDailyShiftHours(setup);
+      const monthlyWorkingHours = dailyHours * 30;
+      return monthlyWorkingHours > 0 ? Number(setup.monthlySalary || 0) / monthlyWorkingHours : 0;
+    }
+
+    function getActiveSegment(segments, dateKey) {
+      const sorted = [...segments].sort((a,b) => new Date(a.startDate) - new Date(b.startDate));
+      let active = null;
+      for (const seg of sorted) {
+        if (seg.startDate <= dateKey) active = seg;
+      }
+      return active;
+    }
+
+    function getSegmentForDate(segments, dateKey) {
+      return getActiveSegment(segments, dateKey);
+    }
+
+    function getDatesBetween(startKey, endKey) {
+      const arr = [];
+      let d = dateFromKey(startKey);
+      const end = dateFromKey(endKey);
+      while (d <= end) {
+        arr.push(todayKey(d));
+        d = addDays(d, 1);
+      }
+      return arr;
+    }
+
+    function migrateState(raw) {
+      if (!raw) return defaultState;
+      const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+      const clean = { ...defaultState, ...parsed };
+      clean.setup = { ...defaultSetup, ...(parsed.setup || {}) };
+      clean.segments = Array.isArray(parsed.segments) ? parsed.segments : [];
+      clean.events = Array.isArray(parsed.events) ? parsed.events : [];
+      if (clean.setupDone && clean.segments.length === 0) {
+        clean.segments = [{
+          id: crypto.randomUUID(),
+          startDate: clean.setup.startDate,
+          shiftStart: clean.setup.shiftStart,
+          shiftEnd: clean.setup.shiftEnd,
+          monthlySalary: Number(clean.setup.monthlySalary),
+          overtimeRate: Number(clean.setup.overtimeRate),
+          createdAt: Date.now()
+        }];
+      }
+      return clean;
+    }
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return defaultState;
+        const data = migrateState(raw);
+        if (Date.now() - (data.createdAt || Date.now()) > ONE_YEAR_MS) {
+          const trimmedEvents = (data.events || []).filter(e => Date.now() - (e.createdAt || 0) <= ONE_YEAR_MS);
+          return { ...data, events: trimmedEvents, createdAt: Date.now() };
+        }
+        return data;
+      } catch {
+        return defaultState;
+      }
+    }
+
+    function saveState(state) {
+      const payload = { ...state, updatedAt: Date.now() };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    }
+
+    function calculateDay(dateKey, segments, events, now = new Date()) {
+      const seg = getSegmentForDate(segments, dateKey);
+      if (!seg) return null;
+
+      const setup = {
+        shiftStart: seg.shiftStart,
+        shiftEnd: seg.shiftEnd,
+        monthlySalary: Number(seg.monthlySalary),
+        overtimeRate: Number(seg.overtimeRate),
+        startDate: seg.startDate
+      };
+
+      const { start, end } = getShiftWindow(dateKey, setup);
+      const shiftMs = end - start;
+      const hourlyRate = getHourlyRate(setup);
+      const shiftHours = shiftMs / 3600000;
+      const fullDayBase = hourlyRate * shiftHours;
+
+      const dayEvents = events.filter(e => e.dateKey === dateKey);
+      const fullLeave = dayEvents.find(e => e.type === "full_leave");
+      const hourlyLeave = dayEvents.find(e => e.type === "hourly_leave");
+
+      let workedMs = 0;
+      let isLive = false;
+
+      if (now >= end) workedMs = shiftMs;
+      else if (now >= start && now < end) {
+        workedMs = now - start;
+        isLive = true;
+      } else workedMs = 0;
+
+      let baseEarn = (workedMs / 3600000) * hourlyRate;
+      let paidHours = workedMs / 3600000;
+
+      if (fullLeave) {
+        baseEarn = 0;
+        paidHours = 0;
+        isLive = false;
+      }
+
+      if (hourlyLeave) {
+        const hoursOnly = Math.floor(workedMs / 3600000);
+        baseEarn = hoursOnly * hourlyRate;
+        paidHours = hoursOnly;
+        isLive = false;
+      }
+
+      const overtimeHours = dayEvents
+        .filter(e => e.type === "overtime")
+        .reduce((sum,e) => sum + Number(e.hours || 0), 0);
+      const overtimeEarn = overtimeHours * Number(setup.overtimeRate || 0);
+      const manualAdjust = dayEvents
+        .filter(e => e.type === "adjustment")
+        .reduce((sum,e) => sum + Number(e.amount || 0), 0);
+
+      const totalEarn = baseEarn + overtimeEarn + manualAdjust;
+
+      return {
+        dateKey,
+        setup,
+        start,
+        end,
+        hourlyRate,
+        shiftHours,
+        fullDayBase,
+        workedMs,
+        paidHours,
+        baseEarn,
+        overtimeHours,
+        overtimeEarn,
+        manualAdjust,
+        totalEarn,
+        isLive,
+        fullLeave: !!fullLeave,
+        hourlyLeave: !!hourlyLeave,
+        events: dayEvents
+      };
+    }
+
+    function calculateAll(segments, events, now = new Date()) {
+      if (!segments.length) return { total: 0, days: [], today: null };
+      const first = [...segments].sort((a,b) => new Date(a.startDate) - new Date(b.startDate))[0].startDate;
+      const dates = getDatesBetween(first, todayKey(now));
+      const days = dates.map(d => calculateDay(d, segments, events, now)).filter(Boolean);
+      const total = days.reduce((sum,d) => sum + d.totalEarn, 0);
+      return { total, days, today: days.find(d => d.dateKey === todayKey(now)) || null };
+    }
+
+    const themeMap = {
+      royal: {
+        name: "Royal Neon",
+        bg: "from-indigo-500 via-fuchsia-500 to-amber-400",
+        soft: "bg-indigo-500/15",
+        ring: "ring-indigo-300/30",
+        text: "text-indigo-100"
+      },
+      emerald: {
+        name: "Emerald Cash",
+        bg: "from-emerald-400 via-teal-400 to-cyan-400",
+        soft: "bg-emerald-500/15",
+        ring: "ring-emerald-300/30",
+        text: "text-emerald-100"
+      },
+      fire: {
+        name: "Fire Bonus",
+        bg: "from-orange-400 via-rose-500 to-pink-500",
+        soft: "bg-orange-500/15",
+        ring: "ring-orange-300/30",
+        text: "text-orange-100"
+      }
+    };
+
+    function IconBox({ icon: Icon, className = "", children }) {
+      return (
+        <div className={`h-11 w-11 rounded-2xl bg-white/10 border border-white/15 flex items-center justify-center shadow-lg ${className}`}>
+          {Icon ? <Icon className="w-5 h-5" /> : children}
+        </div>
+      );
+    }
+
+    function Button({ children, onClick, variant = "primary", className = "", disabled = false, type = "button" }) {
+      const styles = {
+        primary: "bg-gradient-to-r from-indigo-500 via-fuchsia-500 to-amber-400 text-white shadow-glow hover:scale-[1.02]",
+        emerald: "bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 text-slate-950 shadow-emerald hover:scale-[1.02]",
+        ghost: "bg-white/8 border border-white/15 text-white hover:bg-white/14",
+        danger: "bg-rose-500/18 border border-rose-300/25 text-rose-100 hover:bg-rose-500/28",
+        dark: "bg-slate-950/70 border border-white/10 text-white hover:bg-slate-900"
+      };
+      return (
+        <button
+          type={type}
+          disabled={disabled}
+          onClick={onClick}
+          className={`relative overflow-hidden px-5 py-3 rounded-2xl font-bold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[.98] ${styles[variant]} ${className}`}
+        >
+          <span className="relative z-10 flex items-center justify-center gap-2">{children}</span>
+        </button>
+      );
+    }
+
+    function Field({ label, icon: Icon, children, hint }) {
+      return (
+        <label className="block">
+          <div className="flex items-center gap-2 mb-2 text-sm font-bold text-white/78">
+            {Icon && <Icon className="w-4 h-4 text-indigo-200" />}
+            {label}
+          </div>
+          {children}
+          {hint && <p className="text-xs text-white/45 mt-2">{hint}</p>}
+        </label>
+      );
+    }
+
+    function Input(props) {
+      return (
+        <input
+          {...props}
+          className={`w-full rounded-2xl bg-slate-950/45 border border-white/12 px-4 py-3 outline-none focus:border-indigo-300/60 focus:ring-4 focus:ring-indigo-400/10 transition text-white placeholder:text-white/30 ${props.className || ""}`}
+        />
+      );
+    }
+
+    function SetupScreen({ state, setState }) {
+      const [form, setForm] = useState(state.setup || defaultSetup);
+      const update = (k,v) => setForm(prev => ({ ...prev, [k]: v }));
+
+      const proceed = () => {
+        const seg = {
+          id: crypto.randomUUID(),
+          startDate: form.startDate,
+          shiftStart: form.shiftStart,
+          shiftEnd: form.shiftEnd,
+          monthlySalary: Number(form.monthlySalary || 0),
+          overtimeRate: Number(form.overtimeRate || 0),
+          createdAt: Date.now()
+        };
+        const next = {
+          ...state,
+          setupDone: true,
+          setup: { ...form, monthlySalary: Number(form.monthlySalary), overtimeRate: Number(form.overtimeRate) },
+          segments: [seg],
+          createdAt: Date.now(),
+          updatedAt: Date.now()
+        };
+        setState(next);
+        saveState(next);
+      };
+
+      return (
+        <div className="min-h-screen relative overflow-hidden px-4 py-8 md:p-8">
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute top-16 left-8 w-72 h-72 bg-indigo-500/20 blur-3xl rounded-full animate-float"></div>
+            <div className="absolute top-24 right-10 w-80 h-80 bg-fuchsia-500/20 blur-3xl rounded-full animate-float" style={{animationDelay:"-2s"}}></div>
+            <div className="absolute bottom-10 left-1/3 w-96 h-96 bg-emerald-500/14 blur-3xl rounded-full animate-float" style={{animationDelay:"-4s"}}></div>
+          </div>
+
+          <div className="max-w-7xl mx-auto relative z-10">
+            <nav className="flex items-center justify-between mb-10">
+              <div className="flex items-center gap-3">
+                <div className="h-13 w-13 rounded-3xl bg-gradient-to-br from-indigo-400 via-fuchsia-400 to-amber-300 p-[2px] shadow-glow">
+                  <div className="h-full w-full rounded-3xl bg-slate-950 flex items-center justify-center">
+                    <IndianRupee className="w-7 h-7 text-amber-200" />
+                  </div>
+                </div>
+                <div>
+                  <h1 className="text-2xl md:text-3xl font-black tracking-tight">Salary Pulse</h1>
+                  <p className="text-white/45 text-sm">Live earning tracker, boss mode 💸</p>
+                </div>
+              </div>
+              <div className="hidden md:flex items-center gap-3 glass rounded-full px-4 py-2">
+                <ShieldCheck className="w-4 h-4 text-emerald-300" />
+                <span className="text-sm text-white/70">1 year local cache + JSON backup</span>
+              </div>
+            </nav>
+
+            <div className="grid lg:grid-cols-[1.1fr_.9fr] gap-8 items-stretch">
+              <motion.div
+                initial={{opacity:0, y:30}}
+                animate={{opacity:1, y:0}}
+                transition={{duration:.7}}
+                className="glass-strong rounded-[2.2rem] p-6 md:p-9 premium-border"
+              >
+                <div className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 px-4 py-2 mb-6">
+                  <Sparkles className="w-4 h-4 text-amber-200" />
+                  <span className="text-sm font-bold text-white/75">Setup your job once, then live counter chalega</span>
+                </div>
+                <h2 className="text-4xl md:text-6xl font-black leading-[1.02] tracking-tight">
+                  Apni salary ko <span className="premium-text">real-time</span> me track karo.
+                </h2>
+                <p className="text-white/62 mt-5 text-lg leading-relaxed max-w-2xl">
+                  Working shift ke andar live earning badhegi. Shift ke bahar countdown show hoga — matlab website bhi samajhdaar, “no work, no fake counting” 😄
+                </p>
+
+                <div className="grid md:grid-cols-2 gap-5 mt-9">
+                  <Field label="Working hour shift — start" icon={Clock}>
+                    <Input type="time" value={form.shiftStart} onChange={e=>update("shiftStart", e.target.value)} />
+                  </Field>
+                  <Field label="Working hour shift — end" icon={Clock}>
+                    <Input type="time" value={form.shiftEnd} onChange={e=>update("shiftEnd", e.target.value)} />
+                  </Field>
+                  <Field label="Month wise salary" icon={Wallet} hint="Monthly salary se per-hour rate auto calculate hoga.">
+                    <Input type="number" min="0" value={form.monthlySalary} onChange={e=>update("monthlySalary", e.target.value)} placeholder="18000" />
+                  </Field>
+                  <Field label="Overtime payment per hour" icon={Timer}>
+                    <Input type="number" min="0" value={form.overtimeRate} onChange={e=>update("overtimeRate", e.target.value)} placeholder="120" />
+                  </Field>
+                  <Field label="Job starting date" icon={CalendarDays} hint="Isi exact date se salary calculate start hogi.">
+                    <Input type="date" value={form.startDate} onChange={e=>update("startDate", e.target.value)} />
+                  </Field>
+                  <div className="rounded-3xl bg-gradient-to-br from-emerald-400/16 to-cyan-400/10 border border-emerald-200/15 p-5">
+                    <div className="flex items-center gap-3">
+                      <IconBox icon={Gauge} className="text-emerald-200" />
+                      <div>
+                        <p className="text-white/45 text-sm">Calculated hourly rate</p>
+                        <p className="text-2xl font-black text-emerald-100">₹{formatMoney(getHourlyRate(form))}/hr</p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-white/45 mt-4">Formula: monthly salary ÷ (daily shift hours × 30)</p>
+                  </div>
+                </div>
+
+                <div className="mt-8 flex flex-col sm:flex-row gap-4">
+                  <Button onClick={proceed} className="text-lg py-4 flex-1">
+                    <Play className="w-5 h-5" /> Proceed and Start
+                  </Button>
+                  <Button variant="ghost" onClick={()=>setForm(defaultSetup)} className="py-4">
+                    <RotateCcw className="w-5 h-5" /> Reset
+                  </Button>
+                </div>
+              </motion.div>
+
+              <motion.div
+                initial={{opacity:0, scale:.95}}
+                animate={{opacity:1, scale:1}}
+                transition={{duration:.7, delay:.1}}
+                className="space-y-5"
+              >
+                <div className="glass rounded-[2rem] p-6 overflow-hidden relative">
+                  <div className="absolute -right-10 -top-10 w-44 h-44 bg-amber-400/20 rounded-full blur-3xl"></div>
+                  <div className="flex items-center gap-3 mb-6">
+                    <IconBox icon={Crown} className="text-amber-200" />
+                    <div>
+                      <h3 className="font-black text-xl">Premium dashboard preview</h3>
+                      <p className="text-white/45 text-sm">After setup, ye sab live dikhega.</p>
+                    </div>
+                  </div>
+                  <div className="rounded-[1.7rem] bg-slate-950/55 border border-white/10 p-5">
+                    <p className="text-white/45 text-sm">Total earned</p>
+                    <div className="text-5xl font-black mt-2 money-shadow text-emerald-200">₹36,000.00</div>
+                    <div className="mt-5 h-3 rounded-full bg-white/10 overflow-hidden">
+                      <div className="h-full w-[68%] rounded-full bg-gradient-to-r from-emerald-300 via-cyan-300 to-indigo-300"></div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-3 mt-5">
+                      {[
+                        ["Shift", "10h"],
+                        ["Rate", "₹60/hr"],
+                        ["OT", "₹120/hr"]
+                      ].map(([a,b]) => (
+                        <div key={a} className="rounded-2xl bg-white/8 border border-white/10 p-3">
+                          <p className="text-white/40 text-xs">{a}</p>
+                          <p className="font-black">{b}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-5">
+                  {[
+                    [Database, "Local cache", "1 year data saved"],
+                    [FileJson, "Import/Export", "JSON backup ready"],
+                    [CalendarX, "Leave tools", "Full day + hourly"],
+                    [Zap, "Live salary", "Only during shift"]
+                  ].map(([Icon, title, sub]) => (
+                    <div key={title} className="glass rounded-[1.6rem] p-5">
+                      <Icon className="w-7 h-7 text-indigo-200 mb-4" />
+                      <h4 className="font-black">{title}</h4>
+                      <p className="text-white/45 text-sm mt-1">{sub}</p>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function StatCard({ icon: Icon, label, value, sub, tone = "indigo" }) {
+      const tones = {
+        indigo: "from-indigo-500/22 to-blue-500/8 text-indigo-100",
+        emerald: "from-emerald-500/22 to-teal-500/8 text-emerald-100",
+        amber: "from-amber-500/22 to-orange-500/8 text-amber-100",
+        rose: "from-rose-500/22 to-pink-500/8 text-rose-100",
+        cyan: "from-cyan-500/22 to-sky-500/8 text-cyan-100"
+      };
+      return (
+        <motion.div whileHover={{y:-4}} className={`rounded-[1.7rem] bg-gradient-to-br ${tones[tone]} border border-white/12 p-5 glass`}>
+          <div className="flex items-start justify-between gap-4">
+            <IconBox icon={Icon} className={tones[tone].split(" ").pop()} />
+            <div className="text-right">
+              <p className="text-white/45 text-sm font-semibold">{label}</p>
+              <p className="text-2xl md:text-3xl font-black mt-1">{value}</p>
+              {sub && <p className="text-white/40 text-xs mt-1">{sub}</p>}
+            </div>
+          </div>
+        </motion.div>
+      );
+    }
+
+    function Header({ total, openSettings, openHistory, openBackup, resetAll, theme, setTheme }) {
+      return (
+        <header className="sticky top-0 z-40 backdrop-blur-2xl bg-slate-950/50 border-b border-white/10">
+          <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-12 rounded-3xl bg-gradient-to-br from-indigo-400 via-fuchsia-400 to-amber-300 p-[2px] shadow-glow">
+                <div className="h-full w-full rounded-3xl bg-slate-950 flex items-center justify-center">
+                  <IndianRupee className="w-6 h-6 text-amber-200" />
+                </div>
+              </div>
+              <div>
+                <h1 className="font-black text-xl leading-none">Salary Pulse</h1>
+                <p className="text-xs text-white/45 mt-1">Total: ₹{formatMoney(total)}</p>
+              </div>
+            </div>
+            <div className="hidden lg:flex items-center gap-2 rounded-full glass px-3 py-2">
+              {Object.entries(themeMap).map(([key,val]) => (
+                <button
+                  key={key}
+                  onClick={()=>setTheme(key)}
+                  className={`px-4 py-2 rounded-full text-sm font-bold transition ${theme===key ? "bg-white text-slate-950" : "text-white/60 hover:bg-white/10"}`}
+                >
+                  {val.name}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" className="hidden sm:flex px-4 py-2.5" onClick={openHistory}><History className="w-4 h-4" /> History</Button>
+              <Button variant="ghost" className="hidden sm:flex px-4 py-2.5" onClick={openBackup}><FileJson className="w-4 h-4" /> Backup</Button>
+              <Button variant="ghost" className="px-4 py-2.5" onClick={openSettings}><Settings className="w-4 h-4" /></Button>
+            </div>
+          </div>
+        </header>
+      );
+    }
+
+    function LivePanel({ today, total, now }) {
+      if (!today) {
+        return (
+          <div className="glass-strong rounded-[2.2rem] p-7 md:p-9 relative overflow-hidden">
+            <div className="absolute -top-24 -right-24 w-80 h-80 bg-rose-500/20 blur-3xl rounded-full"></div>
+            <IconBox icon={AlertTriangle} className="text-amber-200 mb-5" />
+            <h2 className="text-3xl md:text-5xl font-black">Job abhi start nahi hua</h2>
+            <p className="text-white/55 mt-3">Starting date ke baad calculation begin hoga. Patience is also a skill 😄</p>
+          </div>
+        );
+      }
+
+      const beforeShift = now < today.start;
+      const afterShift = now >= today.end;
+      const countdownMs = beforeShift ? today.start - now : afterShift ? getShiftWindow(todayKey(addDays(now,1)), today.setup).start - now : today.end - now;
+      const progress = today.shiftHours ? clamp((today.workedMs / (today.shiftHours * 3600000)) * 100, 0, 100) : 0;
+
+      return (
+        <div className="glass-strong rounded-[2.2rem] p-6 md:p-9 relative overflow-hidden premium-border">
+          <div className="absolute -top-24 -right-24 w-96 h-96 bg-emerald-500/14 blur-3xl rounded-full"></div>
+          <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-indigo-500/14 blur-3xl rounded-full"></div>
+
+          <div className="relative z-10">
+            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
+              <div>
+                <div className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 px-4 py-2 mb-5">
+                  {today.isLive ? <Activity className="w-4 h-4 text-emerald-300 animate-pulse" /> : <Hourglass className="w-4 h-4 text-amber-200" />}
+                  <span className="text-sm font-bold text-white/75">
+                    {today.isLive ? "Live salary counting now" : beforeShift ? "Working shift not started Now, I will start on" : "Shift completed for today"}
+                  </span>
+                </div>
+                <h2 className="text-4xl md:text-7xl font-black tracking-tight leading-none">
+                  ₹<span className="money-shadow text-emerald-200">{formatMoney(total)}</span>
+                </h2>
+                <p className="text-white/50 mt-3">
+                  Aaj ka earning: <span className="font-black text-white">₹{formatMoney(today.totalEarn)}</span> · Base ₹{formatMoney(today.baseEarn)} · OT ₹{formatMoney(today.overtimeEarn)}
+                </p>
+              </div>
+
+              <div className="rounded-[1.7rem] bg-slate-950/55 border border-white/12 p-5 min-w-[260px]">
+                <p className="text-white/45 text-sm font-semibold">{today.isLive ? "Shift ends in" : beforeShift ? "Work starts in" : "Next shift starts in"}</p>
+                <div className="text-4xl font-black mt-2 tabular-nums">{msToHMS(countdownMs)}</div>
+                <p className="text-white/40 text-xs mt-2">
+                  Shift: {today.setup.shiftStart} → {today.setup.shiftEnd}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-8 rounded-[1.8rem] bg-slate-950/45 border border-white/10 p-5">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-bold text-white/65">Today progress</span>
+                <span className="text-sm font-black">{progress.toFixed(1)}%</span>
+              </div>
+              <div className="h-5 rounded-full bg-white/10 overflow-hidden p-1">
+                <motion.div
+                  initial={{width:0}}
+                  animate={{width:`${progress}%`}}
+                  transition={{duration:.7}}
+                  className="h-full rounded-full bg-gradient-to-r from-emerald-300 via-cyan-300 to-indigo-300 shadow-emerald"
+                />
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-5">
+                <div className="rounded-2xl bg-white/8 border border-white/10 p-4">
+                  <p className="text-white/40 text-xs">Hourly rate</p>
+                  <p className="font-black text-lg">₹{formatMoney(today.hourlyRate)}</p>
+                </div>
+                <div className="rounded-2xl bg-white/8 border border-white/10 p-4">
+                  <p className="text-white/40 text-xs">Paid hours</p>
+                  <p className="font-black text-lg">{Number(today.paidHours).toFixed(2)}h</p>
+                </div>
+                <div className="rounded-2xl bg-white/8 border border-white/10 p-4">
+                  <p className="text-white/40 text-xs">Overtime</p>
+                  <p className="font-black text-lg">{today.overtimeHours}h</p>
+                </div>
+                <div className="rounded-2xl bg-white/8 border border-white/10 p-4">
+                  <p className="text-white/40 text-xs">Leave status</p>
+                  <p className="font-black text-lg">{today.fullLeave ? "Full Leave" : today.hourlyLeave ? "Hourly Paid" : "Working"}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function QuickActions({ state, setState, today }) {
+      const [ot, setOt] = useState(1);
+      const [adjust, setAdjust] = useState("");
+      const dateKey = todayKey();
+
+      const addEvent = (event) => {
+        const next = {
+          ...state,
+          events: [...state.events.filter(e => !(event.unique && e.dateKey === event.dateKey && e.type === event.type)), {
+            id: crypto.randomUUID(),
+            createdAt: Date.now(),
+            ...event
+          }],
+          updatedAt: Date.now()
+        };
+        setState(next);
+        saveState(next);
+      };
+
+      const removeTodayLeave = () => {
+        const next = {
+          ...state,
+          events: state.events.filter(e => !(e.dateKey === dateKey && (e.type === "full_leave" || e.type === "hourly_leave"))),
+          updatedAt: Date.now()
+        };
+        setState(next);
+        saveState(next);
+      };
+
+      return (
+        <div className="grid lg:grid-cols-3 gap-5">
+          <div className="glass rounded-[1.9rem] p-6">
+            <div className="flex items-center gap-3 mb-5">
+              <IconBox icon={Plus} className="text-emerald-200" />
+              <div>
+                <h3 className="font-black text-xl">Add overtime</h3>
+                <p className="text-white/45 text-sm">1 hour, 2 hour ya custom</p>
+              </div>
+            </div>
+            <div className="flex gap-2 mb-4">
+              {[1,2,3,4].map(h => (
+                <button key={h} onClick={()=>setOt(h)} className={`flex-1 rounded-2xl py-3 font-black transition ${Number(ot)===h ? "bg-emerald-300 text-slate-950" : "bg-white/8 border border-white/10 text-white/70"}`}>
+                  {h}h
+                </button>
+              ))}
+            </div>
+            <Input type="number" min="0" step="0.25" value={ot} onChange={e=>setOt(e.target.value)} placeholder="Custom hours" />
+            <Button variant="emerald" className="w-full mt-4" onClick={()=>addEvent({ type:"overtime", dateKey, hours:Number(ot || 0), note:"Manual overtime added" })}>
+              <Zap className="w-5 h-5" /> Add OT
+            </Button>
+          </div>
+
+          <div className="glass rounded-[1.9rem] p-6">
+            <div className="flex items-center gap-3 mb-5">
+              <IconBox icon={CalendarX} className="text-rose-200" />
+              <div>
+                <h3 className="font-black text-xl">Add Leave</h3>
+                <p className="text-white/45 text-sm">Full day ya hour-only payment</p>
+              </div>
+            </div>
+            <div className="space-y-3">
+              <Button variant="danger" className="w-full justify-start" onClick={()=>addEvent({ type:"full_leave", dateKey, unique:true, note:"Full day leave — today earning set to zero" })}>
+                <Moon className="w-5 h-5" /> Full day Leave Today
+              </Button>
+              <Button variant="ghost" className="w-full justify-start" onClick={()=>addEvent({ type:"hourly_leave", dateKey, unique:true, note:"Leave with full working hour payment only" })}>
+                <Coffee className="w-5 h-5" /> Leave with working hour payment
+              </Button>
+              <Button variant="dark" className="w-full justify-start" onClick={removeTodayLeave}>
+                <Undo2 className="w-5 h-5" /> Remove today leave
+              </Button>
+            </div>
+          </div>
+
+          <div className="glass rounded-[1.9rem] p-6">
+            <div className="flex items-center gap-3 mb-5">
+              <IconBox icon={Coins} className="text-amber-200" />
+              <div>
+                <h3 className="font-black text-xl">Manual adjust</h3>
+                <p className="text-white/45 text-sm">Bonus ya deduction add karo</p>
+              </div>
+            </div>
+            <Input type="number" value={adjust} onChange={e=>setAdjust(e.target.value)} placeholder="Example: 500 or -200" />
+            <div className="grid grid-cols-2 gap-3 mt-4">
+              <Button variant="ghost" onClick={()=>setAdjust(500)}>+₹500</Button>
+              <Button variant="ghost" onClick={()=>setAdjust(-200)}>-₹200</Button>
+            </div>
+            <Button className="w-full mt-4" onClick={()=>{
+              addEvent({ type:"adjustment", dateKey, amount:Number(adjust || 0), note:"Manual adjustment" });
+              setAdjust("");
+            }}>
+              <Save className="w-5 h-5" /> Save Adjust
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    function Modal({ open, onClose, title, icon: Icon, children, wide=false }) {
+      return (
+        <AnimatePresence>
+          {open && (
+            <motion.div
+              initial={{opacity:0}}
+              animate={{opacity:1}}
+              exit={{opacity:0}}
+              className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xl flex items-center justify-center p-4"
+              onMouseDown={e=>{ if(e.target === e.currentTarget) onClose(); }}
+            >
+              <motion.div
+                initial={{opacity:0, y:30, scale:.96}}
+                animate={{opacity:1, y:0, scale:1}}
+                exit={{opacity:0, y:20, scale:.96}}
+                className={`glass-strong rounded-[2rem] w-full ${wide ? "max-w-6xl" : "max-w-2xl"} max-h-[88vh] overflow-hidden`}
+              >
+                <div className="p-5 border-b border-white/10 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <IconBox icon={Icon || Sparkles} />
+                    <h2 className="font-black text-2xl">{title}</h2>
+                  </div>
+                  <button onClick={onClose} className="h-11 w-11 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/10 flex items-center justify-center">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <div className="p-5 overflow-auto max-h-[calc(88vh-88px)] no-scrollbar">
+                  {children}
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      );
+    }
+
+    function SettingsModal({ open, onClose, state, setState }) {
+      const active = getActiveSegment(state.segments, todayKey()) || state.segments[state.segments.length - 1] || defaultSetup;
+      const [form, setForm] = useState({
+        shiftStart: active.shiftStart || state.setup.shiftStart,
+        shiftEnd: active.shiftEnd || state.setup.shiftEnd,
+        monthlySalary: active.monthlySalary || state.setup.monthlySalary,
+        overtimeRate: active.overtimeRate || state.setup.overtimeRate,
+        startDate: todayKey()
+      });
+
+      useEffect(() => {
+        if(open) {
+          const a = getActiveSegment(state.segments, todayKey()) || state.segments[state.segments.length - 1] || defaultSetup;
+          setForm({
+            shiftStart: a.shiftStart || state.setup.shiftStart,
+            shiftEnd: a.shiftEnd || state.setup.shiftEnd,
+            monthlySalary: a.monthlySalary || state.setup.monthlySalary,
+            overtimeRate: a.overtimeRate || state.setup.overtimeRate,
+            startDate: todayKey()
+          });
+        }
+      }, [open]);
+
+      const update = (k,v) => setForm(p=>({...p,[k]:v}));
+
+      const saveNewSegment = () => {
+        const seg = {
+          id: crypto.randomUUID(),
+          startDate: form.startDate,
+          shiftStart: form.shiftStart,
+          shiftEnd: form.shiftEnd,
+          monthlySalary: Number(form.monthlySalary || 0),
+          overtimeRate: Number(form.overtimeRate || 0),
+          createdAt: Date.now()
+        };
+        const next = {
+          ...state,
+          setup: {
+            shiftStart: form.shiftStart,
+            shiftEnd: form.shiftEnd,
+            monthlySalary: Number(form.monthlySalary || 0),
+            overtimeRate: Number(form.overtimeRate || 0),
+            startDate: form.startDate
+          },
+          segments: [...state.segments, seg].sort((a,b)=>new Date(a.startDate)-new Date(b.startDate)),
+          updatedAt: Date.now()
+        };
+        setState(next);
+        saveState(next);
+        onClose();
+      };
+
+      return (
+        <Modal open={open} onClose={onClose} title="Settings" icon={Settings}>
+          <div className="rounded-[1.6rem] bg-amber-400/10 border border-amber-200/20 p-4 mb-5">
+            <div className="flex gap-3">
+              <Info className="w-5 h-5 text-amber-200 shrink-0 mt-1" />
+              <p className="text-sm text-white/70">
+                Setting change karne se old balance pe impact nahi padega. New salary/shift/start date ek new job segment banayega, aur calculation old total ke upar continue hogi. Smart system, no drama 😎
+              </p>
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-5">
+            <Field label="Change working hour shift — start" icon={Clock}>
+              <Input type="time" value={form.shiftStart} onChange={e=>update("shiftStart", e.target.value)} />
+            </Field>
+            <Field label="Change working hour shift — end" icon={Clock}>
+              <Input type="time" value={form.shiftEnd} onChange={e=>update("shiftEnd", e.target.value)} />
+            </Field>
+            <Field label="Change salary" icon={Wallet}>
+              <Input type="number" value={form.monthlySalary} onChange={e=>update("monthlySalary", e.target.value)} />
+            </Field>
+            <Field label="Overtime payment per hour" icon={Timer}>
+              <Input type="number" value={form.overtimeRate} onChange={e=>update("overtimeRate", e.target.value)} />
+            </Field>
+            <Field label="New job starting date" icon={CalendarDays} hint="Is date se new settings apply hongi.">
+              <Input type="date" value={form.startDate} onChange={e=>update("startDate", e.target.value)} />
+            </Field>
+            <div className="rounded-3xl bg-emerald-400/10 border border-emerald-200/15 p-5">
+              <p className="text-white/45 text-sm">New hourly rate</p>
+              <p className="text-3xl font-black text-emerald-100 mt-1">₹{formatMoney(getHourlyRate(form))}</p>
+              <p className="text-white/40 text-xs mt-2">New segment ke liye apply hoga.</p>
+            </div>
+          </div>
+
+          <div className="flex gap-3 mt-6">
+            <Button className="flex-1" onClick={saveNewSegment}><Save className="w-5 h-5" /> Save as New Job Segment</Button>
+            <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          </div>
+
+          <div className="mt-7">
+            <h3 className="font-black text-lg mb-3">Job segments</h3>
+            <div className="space-y-3">
+              {[...state.segments].sort((a,b)=>new Date(b.startDate)-new Date(a.startDate)).map((seg, i) => (
+                <div key={seg.id} className="rounded-2xl bg-white/8 border border-white/10 p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                  <div>
+                    <p className="font-black">{i === 0 ? "Latest segment" : "Old segment"} · from {prettyDate(seg.startDate)}</p>
+                    <p className="text-white/45 text-sm">{seg.shiftStart} → {seg.shiftEnd} · ₹{formatMoney(seg.monthlySalary,0)}/month · OT ₹{formatMoney(seg.overtimeRate,0)}/hr</p>
+                  </div>
+                  <BadgeCheck className="w-5 h-5 text-emerald-200" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </Modal>
+      );
+    }
+
+    function HistoryModal({ open, onClose, days }) {
+      const [query, setQuery] = useState("");
+      const [filter, setFilter] = useState("all");
+
+      const filtered = [...days].reverse().filter(d => {
+        const q = query.trim().toLowerCase();
+        const matchQ = !q || prettyDate(d.dateKey).toLowerCase().includes(q) || d.dateKey.includes(q);
+        const matchF = filter === "all" || (filter === "leave" && (d.fullLeave || d.hourlyLeave)) || (filter === "overtime" && d.overtimeHours > 0) || (filter === "earning" && d.totalEarn > 0);
+        return matchQ && matchF;
+      });
+
+      return (
+        <Modal open={open} onClose={onClose} title="Date wise History" icon={History} wide>
+          <div className="flex flex-col md:flex-row gap-3 mb-5">
+            <div className="relative flex-1">
+              <Search className="w-5 h-5 text-white/35 absolute left-4 top-1/2 -translate-y-1/2" />
+              <Input className="pl-12" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search date..." />
+            </div>
+            <select value={filter} onChange={e=>setFilter(e.target.value)} className="rounded-2xl bg-slate-950/45 border border-white/12 px-4 py-3 outline-none">
+              <option value="all">All days</option>
+              <option value="earning">Earning days</option>
+              <option value="overtime">Overtime</option>
+              <option value="leave">Leave</option>
+            </select>
+          </div>
+
+          <div className="grid gap-3">
+            {filtered.map(d => (
+              <motion.div key={d.dateKey} initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} className="rounded-[1.4rem] bg-white/8 border border-white/10 p-4">
+                <div className="grid lg:grid-cols-[1.2fr_1fr_1fr_1fr_1fr] gap-4 items-center">
+                  <div>
+                    <p className="font-black text-lg">{prettyDate(d.dateKey)}</p>
+                    <p className="text-white/42 text-sm">{d.setup.shiftStart} → {d.setup.shiftEnd}</p>
+                  </div>
+                  <div>
+                    <p className="text-white/40 text-xs">Kitna hour kam kiya</p>
+                    <p className="font-black">{Number(d.paidHours).toFixed(2)}h</p>
+                  </div>
+                  <div>
+                    <p className="text-white/40 text-xs">Usdin total earn</p>
+                    <p className="font-black text-emerald-200">₹{formatMoney(d.totalEarn)}</p>
+                  </div>
+                  <div>
+                    <p className="text-white/40 text-xs">Overtime</p>
+                    <p className="font-black">{d.overtimeHours}h · ₹{formatMoney(d.overtimeEarn)}</p>
+                  </div>
+                  <div>
+                    <p className="text-white/40 text-xs">Leave</p>
+                    <p className="font-black">{d.fullLeave ? "Full day" : d.hourlyLeave ? "Hour-only paid" : "No leave"}</p>
+                  </div>
+                </div>
+                {d.events.length > 0 && (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {d.events.map(e => (
+                      <span key={e.id} className="text-xs rounded-full bg-slate-950/50 border border-white/10 px-3 py-1 text-white/60">
+                        {e.type.replaceAll("_"," ")} {e.hours ? `· ${e.hours}h` : ""} {e.amount ? `· ₹${e.amount}` : ""}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </motion.div>
+            ))}
+            {filtered.length === 0 && (
+              <div className="rounded-[1.5rem] bg-white/8 border border-white/10 p-8 text-center">
+                <History className="w-10 h-10 mx-auto text-white/35 mb-3" />
+                <p className="font-black">No history found</p>
+                <p className="text-white/45 text-sm mt-1">Filter thoda soft karo, data mil jayega.</p>
+              </div>
+            )}
+          </div>
+        </Modal>
+      );
+    }
+
+    function BackupModal({ open, onClose, state, setState }) {
+      const fileRef = useRef(null);
+      const [status, setStatus] = useState("");
+
+      const exportJSON = () => {
+        const payload = {
+          app: "Salary Pulse",
+          version: 1,
+          exportedAt: new Date().toISOString(),
+          data: { ...state, updatedAt: Date.now() }
+        };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `salary-pulse-backup-${todayKey()}.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        setStatus("Export done. JSON file ready — new phone me import kar sakte ho.");
+      };
+
+      const importJSON = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        try {
+          const text = await file.text();
+          const parsed = JSON.parse(text);
+          const content = parsed.data ? parsed.data : parsed;
+          const migrated = migrateState(content);
+          const next = { ...migrated, updatedAt: Date.now() };
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+          setState(next);
+          setStatus("Import successful. File nahi, file ke andar ka content local cache me save hua.");
+        } catch (err) {
+          setStatus("Import failed. JSON file valid nahi lag rahi.");
+        } finally {
+          e.target.value = "";
+        }
+      };
+
+      const copyBackup = async () => {
+        const payload = JSON.stringify({ app:"Salary Pulse", version:1, exportedAt:new Date().toISOString(), data:state }, null, 2);
+        await navigator.clipboard.writeText(payload);
+        setStatus("Backup JSON clipboard me copied.");
+      };
+
+      return (
+        <Modal open={open} onClose={onClose} title="Import / Export" icon={FileJson}>
+          <div className="grid md:grid-cols-2 gap-5">
+            <div className="rounded-[1.7rem] bg-gradient-to-br from-emerald-400/14 to-cyan-400/8 border border-emerald-200/15 p-6">
+              <Download className="w-9 h-9 text-emerald-200 mb-4" />
+              <h3 className="font-black text-2xl">Export JSON</h3>
+              <p className="text-white/55 mt-2 text-sm">Saari information .json format me download hogi: setup, segments, history, overtime, leave, adjustments.</p>
+              <Button variant="emerald" className="w-full mt-5" onClick={exportJSON}><Download className="w-5 h-5" /> Export backup</Button>
+            </div>
+
+            <div className="rounded-[1.7rem] bg-gradient-to-br from-indigo-400/14 to-fuchsia-400/8 border border-indigo-200/15 p-6">
+              <Upload className="w-9 h-9 text-indigo-200 mb-4" />
+              <h3 className="font-black text-2xl">Import JSON</h3>
+              <p className="text-white/55 mt-2 text-sm">New phone me JSON select karo. Browser file ko cache me save nahi karega; file ke andar ka content localStorage me save hoga.</p>
+              <input ref={fileRef} type="file" accept="application/json,.json" onChange={importJSON} className="hidden" />
+              <Button className="w-full mt-5" onClick={()=>fileRef.current?.click()}><Upload className="w-5 h-5" /> Import backup</Button>
+            </div>
+          </div>
+
+          <div className="mt-5 rounded-[1.7rem] bg-white/8 border border-white/10 p-5">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <h3 className="font-black text-xl">Clipboard backup</h3>
+                <p className="text-white/45 text-sm">Quick copy option — developer style, ctrl+c energy ⚡</p>
+              </div>
+              <Button variant="ghost" onClick={copyBackup}><Copy className="w-5 h-5" /> Copy JSON</Button>
+            </div>
+          </div>
+
+          {status && (
+            <div className="mt-5 rounded-2xl bg-emerald-400/10 border border-emerald-200/20 p-4 flex gap-3">
+              <CheckCircle2 className="w-5 h-5 text-emerald-200 shrink-0" />
+              <p className="text-white/70 text-sm">{status}</p>
+            </div>
+          )}
+        </Modal>
+      );
+    }
+
+    function Insights({ days, total }) {
+      const last7 = days.slice(-7);
+      const best = [...days].sort((a,b)=>b.totalEarn-a.totalEarn)[0];
+      const otTotal = days.reduce((s,d)=>s+d.overtimeEarn,0);
+      const leaveCount = days.filter(d=>d.fullLeave || d.hourlyLeave).length;
+      const maxEarn = Math.max(1, ...last7.map(d=>d.totalEarn));
+
+      return (
+        <div className="glass rounded-[2rem] p-6">
+          <div className="flex items-center justify-between gap-4 mb-6">
+            <div className="flex items-center gap-3">
+              <IconBox icon={BarChart3} className="text-cyan-200" />
+              <div>
+                <h3 className="font-black text-2xl">Smart insights</h3>
+                <p className="text-white/45 text-sm">Thoda data, thoda motivation, thoda paisa-paisa 💰</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-4 gap-4 mb-6">
+            <div className="rounded-3xl bg-white/8 border border-white/10 p-4">
+              <p className="text-white/40 text-xs">Best day</p>
+              <p className="font-black mt-1">{best ? prettyDate(best.dateKey) : "—"}</p>
+              <p className="text-emerald-200 font-black">₹{formatMoney(best?.totalEarn || 0)}</p>
+            </div>
+            <div className="rounded-3xl bg-white/8 border border-white/10 p-4">
+              <p className="text-white/40 text-xs">Overtime total</p>
+              <p className="font-black mt-1">₹{formatMoney(otTotal)}</p>
+              <p className="text-white/35 text-xs">Extra grind reward</p>
+            </div>
+            <div className="rounded-3xl bg-white/8 border border-white/10 p-4">
+              <p className="text-white/40 text-xs">Leave days</p>
+              <p className="font-black mt-1">{leaveCount}</p>
+              <p className="text-white/35 text-xs">Rest bhi zaroori hai</p>
+            </div>
+            <div className="rounded-3xl bg-white/8 border border-white/10 p-4">
+              <p className="text-white/40 text-xs">Average/day</p>
+              <p className="font-black mt-1">₹{formatMoney(days.length ? total/days.length : 0)}</p>
+              <p className="text-white/35 text-xs">Since start date</p>
+            </div>
+          </div>
+
+          <div className="rounded-[1.6rem] bg-slate-950/45 border border-white/10 p-5">
+            <div className="flex items-end gap-3 h-44">
+              {last7.length === 0 && <p className="text-white/45">No chart data yet.</p>}
+              {last7.map(d => (
+                <div key={d.dateKey} className="flex-1 h-full flex flex-col justify-end items-center gap-2">
+                  <motion.div
+                    initial={{height:0}}
+                    animate={{height:`${Math.max(5, (d.totalEarn/maxEarn)*100)}%`}}
+                    transition={{duration:.7}}
+                    className="w-full rounded-t-2xl bg-gradient-to-t from-indigo-500 via-cyan-400 to-emerald-300 shadow-emerald"
+                  />
+                  <span className="text-[10px] text-white/40">{new Date(d.dateKey).toLocaleDateString("en-IN",{day:"2-digit",month:"short"})}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function Dashboard({ state, setState }) {
+      const [now, setNow] = useState(new Date());
+      const [settingsOpen, setSettingsOpen] = useState(false);
+      const [historyOpen, setHistoryOpen] = useState(false);
+      const [backupOpen, setBackupOpen] = useState(false);
+
+      useEffect(() => {
+        const id = setInterval(()=>setNow(new Date()), 1000);
+        return () => clearInterval(id);
+      }, []);
+
+      const calc = useMemo(() => calculateAll(state.segments, state.events, now), [state, now]);
+      const today = calc.today;
+      const active = getActiveSegment(state.segments, todayKey(now));
+
+      const setTheme = (theme) => {
+        const next = { ...state, theme, updatedAt: Date.now() };
+        setState(next);
+        saveState(next);
+      };
+
+      const resetAll = () => {
+        if(confirm("Sab data delete karna hai? This action cannot be undone.")) {
+          localStorage.removeItem(STORAGE_KEY);
+          setState(defaultState);
+        }
+      };
+
+      return (
+        <div className="min-h-screen">
+          <Header
+            total={calc.total}
+            openSettings={()=>setSettingsOpen(true)}
+            openHistory={()=>setHistoryOpen(true)}
+            openBackup={()=>setBackupOpen(true)}
+            resetAll={resetAll}
+            theme={state.theme}
+            setTheme={setTheme}
+          />
+
+          <main className="max-w-7xl mx-auto px-4 py-7 space-y-6">
+            <section className="grid lg:grid-cols-[1.45fr_.55fr] gap-6">
+              <LivePanel today={today} total={calc.total} now={now} />
+
+              <div className="space-y-5">
+                <StatCard icon={Wallet} label="Total balance" value={`₹${formatMoney(calc.total)}`} sub="All segments included" tone="emerald" />
+                <StatCard icon={Clock} label="Current shift" value={active ? `${active.shiftStart} → ${active.shiftEnd}` : "—"} sub={active ? `From ${prettyDate(active.startDate)}` : "No active job"} tone="indigo" />
+                <StatCard icon={Gauge} label="Hourly rate" value={`₹${formatMoney(active ? getHourlyRate(active) : 0)}`} sub="Monthly salary based" tone="cyan" />
+              </div>
+            </section>
+
+            <QuickActions state={state} setState={setState} today={today} />
+
+            <section className="grid md:grid-cols-4 gap-5">
+              <StatCard icon={BriefcaseBusiness} label="Job segments" value={state.segments.length} sub="Old balance protected" tone="indigo" />
+              <StatCard icon={Timer} label="Total OT hours" value={`${calc.days.reduce((s,d)=>s+d.overtimeHours,0)}h`} sub="Manual entries" tone="amber" />
+              <StatCard icon={CalendarX} label="Leave records" value={state.events.filter(e=>e.type.includes("leave")).length} sub="Full + hourly" tone="rose" />
+              <StatCard icon={Database} label="Cache status" value="Saved" sub="Local browser storage" tone="emerald" />
+            </section>
+
+            <Insights days={calc.days} total={calc.total} />
+
+            <section className="grid lg:grid-cols-2 gap-6">
+              <div className="glass rounded-[2rem] p-6">
+                <div className="flex items-center gap-3 mb-5">
+                  <IconBox icon={Rocket} className="text-fuchsia-200" />
+                  <div>
+                    <h3 className="font-black text-2xl">How it calculates</h3>
+                    <p className="text-white/45 text-sm">Simple logic, premium execution</p>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  {[
+                    ["Live count", "Shift ke andar current time ke hisaab se salary badhti hai."],
+                    ["Shift off", "Shift ke bahar total earned show hota hai, live counting pause rehti hai."],
+                    ["Full leave", "Aaj ka calculated amount zero ho jata hai."],
+                    ["Hour-only leave", "Minutes ka amount remove, sirf complete hours ka payment add."],
+                    ["Settings", "New changes new segment banate hain, old balance safe rehta hai."],
+                    ["Import", "JSON file ke content ko local cache me save karta hai, file ko nahi."]
+                  ].map(([a,b]) => (
+                    <div key={a} className="rounded-2xl bg-white/8 border border-white/10 p-4 flex gap-3">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-200 shrink-0 mt-1" />
+                      <div>
+                        <p className="font-black">{a}</p>
+                        <p className="text-white/48 text-sm">{b}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="glass rounded-[2rem] p-6">
+                <div className="flex items-center gap-3 mb-5">
+                  <IconBox icon={Flame} className="text-orange-200" />
+                  <div>
+                    <h3 className="font-black text-2xl">Recent activity</h3>
+                    <p className="text-white/45 text-sm">Latest actions yaha dikhenge</p>
+                  </div>
+                </div>
+                <div className="space-y-3 max-h-[430px] overflow-auto no-scrollbar">
+                  {[...state.events].sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).slice(0,10).map(e => (
+                    <div key={e.id} className="rounded-2xl bg-white/8 border border-white/10 p-4 flex items-center justify-between gap-4">
+                      <div>
+                        <p className="font-black capitalize">{e.type.replaceAll("_"," ")}</p>
+                        <p className="text-white/45 text-sm">{prettyDate(e.dateKey)} · {e.note || "Entry saved"}</p>
+                      </div>
+                      <span className="rounded-full bg-slate-950/50 border border-white/10 px-3 py-1 text-xs text-white/60">
+                        {e.hours ? `${e.hours}h` : e.amount ? `₹${e.amount}` : "done"}
+                      </span>
+                    </div>
+                  ))}
+                  {state.events.length === 0 && (
+                    <div className="rounded-2xl bg-white/8 border border-white/10 p-8 text-center">
+                      <Sparkles className="w-10 h-10 mx-auto text-white/35 mb-3" />
+                      <p className="font-black">No activity yet</p>
+                      <p className="text-white/45 text-sm mt-1">Overtime ya leave add karoge to yaha show hoga.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </section>
+
+            <footer className="py-8 text-center text-white/35 text-sm">
+              Salary Pulse · Frontend-only · Local cache · JSON backup · Paisa tracker with main character energy ✨
+              <div className="mt-4">
+                <Button variant="danger" className="px-4 py-2" onClick={resetAll}><Trash2 className="w-4 h-4" /> Reset all data</Button>
+              </div>
+            </footer>
+          </main>
+
+          <SettingsModal open={settingsOpen} onClose={()=>setSettingsOpen(false)} state={state} setState={setState} />
+          <HistoryModal open={historyOpen} onClose={()=>setHistoryOpen(false)} days={calc.days} />
+          <BackupModal open={backupOpen} onClose={()=>setBackupOpen(false)} state={state} setState={setState} />
+        </div>
+      );
+    }
+
+    function App() {
+      const [state, setState] = useState(() => loadState());
+
+      useEffect(() => {
+        saveState(state);
+      }, []);
+
+      return state.setupDone ? (
+        <Dashboard state={state} setState={setState} />
+      ) : (
+        <SetupScreen state={state} setState={setState} />
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>
