@@ -1,248 +1,363 @@
-<body><div class="container">  <h1>⛽ Fuel Sale Calculator</h1>  <!-- ================= Rates ================= -->  <section class="card">
-    <h2>Fuel Rates</h2><div class="rate-box">
-  <span>Petrol Rate : ₹ <span id="petrolRateText">0.00</span></span>
-  <button id="editPetrolRate">✏️</button>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fuel Sale Calculator</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div class="container">
+
+    <header class="header">
+        <h1>⛽ Fuel Sale Calculator</h1>
+        <p>Petrol Pump Daily Sale Management</p>
+    </header>
+
+
+    <!-- ========================= -->
+    <!-- FUEL RATES -->
+    <!-- ========================= -->
+
+    <section class="card">
+        <h2>Fuel Rates</h2>
+
+        <div class="rate-grid">
+
+            <div class="rate-item">
+                <label>Petrol Rate</label>
+                <div class="rate-box">
+                    <span id="petrolRateText">₹ 0.00</span>
+                    <button id="editPetrolRate">✏️</button>
+                </div>
+            </div>
+
+            <div class="rate-item">
+                <label>Diesel Rate</label>
+                <div class="rate-box">
+                    <span id="dieselRateText">₹ 0.00</span>
+                    <button id="editDieselRate">✏️</button>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+
+
+    <!-- ========================= -->
+    <!-- DEPOSITED AMOUNT -->
+    <!-- ========================= -->
+
+    <section class="card">
+        <h2>Deposited Amount</h2>
+
+        <div id="depositContainer">
+
+        </div>
+
+        <button id="addDepositBtn">
+            + Add New Deposit
+        </button>
+
+        <div class="total-box">
+            Total Deposit :
+            ₹ <span id="depositTotal">0</span>
+        </div>
+    </section>
+
+
+
+    <!-- ========================= -->
+    <!-- CARD AMOUNT -->
+    <!-- ========================= -->
+
+    <section class="card">
+        <h2>Card Amount</h2>
+
+        <div id="cardContainer">
+
+        </div>
+
+        <button id="addCardBtn">
+            + Add New Card Entry
+        </button>
+
+        <div class="total-box">
+            Total Card :
+            ₹ <span id="cardTotal">0</span>
+        </div>
+    </section>
+
+
+
+    <!-- ========================= -->
+    <!-- NET BALANCE -->
+    <!-- ========================= -->
+
+    <section class="card">
+
+        <h2>Net Balance Calculator</h2>
+
+        <div class="toggle-box">
+            <label>
+                <input type="checkbox" id="directAmountToggle">
+                Direct Enter Amount
+            </label>
+        </div>
+
+
+        <!-- Notes Calculator -->
+
+        <div id="notesCalculator">
+
+            <h3>Cash Notes</h3>
+
+            <div class="grid">
+
+                <div>
+                    <label>₹500 Notes</label>
+                    <input type="number" id="n500">
+                </div>
+
+                <div>
+                    <label>₹200 Notes</label>
+                    <input type="number" id="n200">
+                </div>
+
+                <div>
+                    <label>₹100 Notes</label>
+                    <input type="number" id="n100">
+                </div>
+
+                <div>
+                    <label>₹50 Notes</label>
+                    <input type="number" id="n50">
+                </div>
+
+                <div>
+                    <label>₹20 Notes</label>
+                    <input type="number" id="n20">
+                </div>
+
+                <div>
+                    <label>₹10 Notes</label>
+                    <input type="number" id="n10">
+                </div>
+
+            </div>
+
+            <div class="total-box">
+                Total Notes :
+                ₹ <span id="notesTotal">0</span>
+            </div>
+
+
+            <h3>Coins</h3>
+
+            <div class="grid">
+
+                <div>
+                    <label>₹10 Coins</label>
+                    <input type="number" id="c10">
+                </div>
+
+                <div>
+                    <label>₹5 Coins</label>
+                    <input type="number" id="c5">
+                </div>
+
+                <div>
+                    <label>₹2 Coins</label>
+                    <input type="number" id="c2">
+                </div>
+
+                <div>
+                    <label>₹1 Coins</label>
+                    <input type="number" id="c1">
+                </div>
+
+            </div>
+
+            <div class="total-box">
+                Total Coins :
+                ₹ <span id="coinsTotal">0</span>
+            </div>
+
+        </div>
+
+
+        <!-- Direct Amount -->
+
+        <div id="directAmountSection">
+
+            <label>Enter Amount</label>
+
+            <input
+                type="number"
+                id="directAmountInput"
+                placeholder="Enter total amount directly"
+            >
+
+        </div>
+
+        <div class="grand-total">
+            Net Balance :
+            ₹ <span id="netBalanceTotal">0</span>
+        </div>
+
+    </section>
+
+
+
+
+    <!-- ========================= -->
+    <!-- PETROL -->
+    <!-- ========================= -->
+
+    <section class="card">
+        <h2>Petrol Sale</h2>
+
+        <div class="grid">
+
+            <div>
+                <label>Opening Totalizer</label>
+                <input type="number" id="petrolOpen">
+            </div>
+
+            <div>
+                <label>Closing Totalizer</label>
+                <input type="number" id="petrolClose">
+            </div>
+
+        </div>
+
+        <div class="result-box">
+            Sale Liter :
+            <span id="petrolLiter">0</span>
+        </div>
+
+        <div class="result-box">
+            Amount :
+            ₹ <span id="petrolAmount">0</span>
+        </div>
+
+    </section>
+
+
+
+    <!-- ========================= -->
+    <!-- DIESEL 1 -->
+    <!-- ========================= -->
+
+    <section class="card">
+        <h2>Diesel 1 Sale</h2>
+
+        <div class="grid">
+
+            <div>
+                <label>Opening Totalizer</label>
+                <input type="number" id="diesel1Open">
+            </div>
+
+            <div>
+                <label>Closing Totalizer</label>
+                <input type="number" id="diesel1Close">
+            </div>
+
+        </div>
+
+        <div class="result-box">
+            Sale Liter :
+            <span id="diesel1Liter">0</span>
+        </div>
+
+        <div class="result-box">
+            Amount :
+            ₹ <span id="diesel1Amount">0</span>
+        </div>
+
+    </section>
+
+
+
+    <!-- ========================= -->
+    <!-- DIESEL 2 -->
+    <!-- ========================= -->
+
+    <section class="card">
+        <h2>Diesel 2 Sale</h2>
+
+        <div class="grid">
+
+            <div>
+                <label>Opening Totalizer</label>
+                <input type="number" id="diesel2Open">
+            </div>
+
+            <div>
+                <label>Closing Totalizer</label>
+                <input type="number" id="diesel2Close">
+            </div>
+
+        </div>
+
+        <div class="result-box">
+            Sale Liter :
+            <span id="diesel2Liter">0</span>
+        </div>
+
+        <div class="result-box">
+            Amount :
+            ₹ <span id="diesel2Amount">0</span>
+        </div>
+
+    </section>
+
+
+
+
+    <!-- ========================= -->
+    <!-- FINAL SUMMARY -->
+    <!-- ========================= -->
+
+    <section class="card summary-card">
+
+        <h2>Final Summary</h2>
+
+        <div class="summary-row">
+            Collection Amount :
+            ₹ <span id="collectionAmount">0</span>
+        </div>
+
+        <div class="summary-row">
+            Total Sale :
+            ₹ <span id="totalSale">0</span>
+        </div>
+
+        <div class="summary-row result-final">
+            Short / Excess :
+            <span id="shortExcessResult">
+                ₹0
+            </span>
+        </div>
+
+        <button id="resetBtn">
+            Reset Calculation
+        </button>
+
+    </section>
+
+
 </div>
 
-<div class="rate-box">
-  <span>Diesel Rate : ₹ <span id="dieselRateText">0.00</span></span>
-  <button id="editDieselRate">✏️</button>
-</div>
 
-  </section>  <!-- ================= Deposits ================= -->  <section class="card">
-    <h2>Deposited Amount</h2><div id="depositContainer">
+<script src="script.js"></script>
 
-  <div class="deposit-item">
-    <input type="number"
-           placeholder="Enter deposit amount">
-  </div>
-
-</div>
-
-<button id="addDepositBtn">
-  + Add New Deposit
-</button>
-
-<h3>
-  Total Deposit :
-  ₹ <span id="depositTotal">0.00</span>
-</h3>
-
-  </section>  <!-- ================= Card Amount ================= -->  <section class="card">
-    <h2>Card Amount</h2><div id="cardContainer">
-
-  <div class="card-item">
-    <input type="number"
-           placeholder="Enter card amount">
-  </div>
-
-</div>
-
-<button id="addCardBtn">
-  + Add New Card Amount
-</button>
-
-<h3>
-  Total Card :
-  ₹ <span id="cardTotal">0.00</span>
-</h3>
-
-  </section>  <!-- ================= Net Balance ================= -->  <section class="card"><h2>Net Balance</h2>
-
-<h3>Cash Notes</h3>
-
-<div class="notes-grid">
-
-  <div>
-    <label>₹500 Notes</label>
-    <input type="number" id="note500">
-  </div>
-
-  <div>
-    <label>₹200 Notes</label>
-    <input type="number" id="note200">
-  </div>
-
-  <div>
-    <label>₹100 Notes</label>
-    <input type="number" id="note100">
-  </div>
-
-  <div>
-    <label>₹50 Notes</label>
-    <input type="number" id="note50">
-  </div>
-
-  <div>
-    <label>₹20 Notes</label>
-    <input type="number" id="note20">
-  </div>
-
-  <div>
-    <label>₹10 Notes</label>
-    <input type="number" id="note10">
-  </div>
-
-</div>
-
-<h3>
-  Total Cash :
-  ₹ <span id="cashTotal">0.00</span>
-</h3>
-
-<hr>
-
-<h3>Coins</h3>
-
-<div class="notes-grid">
-
-  <div>
-    <label>₹10 Coins</label>
-    <input type="number" id="coin10">
-  </div>
-
-  <div>
-    <label>₹5 Coins</label>
-    <input type="number" id="coin5">
-  </div>
-
-  <div>
-    <label>₹2 Coins</label>
-    <input type="number" id="coin2">
-  </div>
-
-  <div>
-    <label>₹1 Coins</label>
-    <input type="number" id="coin1">
-  </div>
-
-</div>
-
-<h3>
-  Total Coins :
-  ₹ <span id="coinTotal">0.00</span>
-</h3>
-
-<hr>
-
-<h3>Direct Enter Amount</h3>
-
-<input type="number"
-       id="directCash"
-       placeholder="Direct cash amount">
-
-<input type="number"
-       id="directCoin"
-       placeholder="Direct coin amount">
-
-<hr>
-
-<h2>
-  Net Balance :
-  ₹ <span id="netBalanceTotal">0.00</span>
-</h2>
-
-  </section>  <!-- ================= UPI ================= -->  <section class="card"><h2>UPI Amount</h2>
-
-<input type="number"
-       id="upiAmount"
-       placeholder="Enter UPI Amount">
-
-  </section>  <!-- ================= Collection Total ================= -->  <section class="card"><h2>Collection Total</h2>
-
-<h1>
-  ₹ <span id="collectionTotal">
-    0.00
-  </span>
-</h1>
-
-  </section>  <!-- ================= Petrol ================= -->  <section class="card"><h2>Petrol Sale</h2>
-
-<label>Opening Totalizer</label>
-<input type="number"
-       id="petrolOpen">
-
-<label>Closing Totalizer</label>
-<input type="number"
-       id="petrolClose">
-
-<h3>
-  Sale Liter :
-  <span id="petrolLiter">
-    0
-  </span>
-</h3>
-
-<h3>
-  Amount :
-  ₹ <span id="petrolAmount">
-    0
-  </span>
-</h3>
-
-  </section>  <!-- ================= Diesel 1 ================= -->  <section class="card"><h2>Diesel 1 Sale</h2>
-
-<label>Opening Totalizer</label>
-<input type="number"
-       id="diesel1Open">
-
-<label>Closing Totalizer</label>
-<input type="number"
-       id="diesel1Close">
-
-<h3>
-  Sale Liter :
-  <span id="diesel1Liter">
-    0
-  </span>
-</h3>
-
-<h3>
-  Amount :
-  ₹ <span id="diesel1Amount">
-    0
-  </span>
-</h3>
-
-  </section>  <!-- ================= Diesel 2 ================= -->  <section class="card"><h2>Diesel 2 Sale</h2>
-
-<label>Opening Totalizer</label>
-<input type="number"
-       id="diesel2Open">
-
-<label>Closing Totalizer</label>
-<input type="number"
-       id="diesel2Close">
-
-<h3>
-  Sale Liter :
-  <span id="diesel2Liter">
-    0
-  </span>
-</h3>
-
-<h3>
-  Amount :
-  ₹ <span id="diesel2Amount">
-    0
-  </span>
-</h3>
-
-  </section>  <!-- ================= Final Result ================= -->  <section class="card"><h2>Final Result</h2>
-
-<h3>
-  Total Sale :
-  ₹ <span id="totalSale">
-    0.00
-  </span>
-</h3>
-
-<h3 id="shortExcess">
-  Perfect Match
-</h3>
-
-<button id="resetBtn">
-  Reset Calculation
-</button>
-
-  </section></div></body>
+</body>
+</html>
