@@ -1276,6 +1276,41 @@ calculate();
 </script>
 
 <script src="script.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
+<link rel="stylesheet" href="receipt.css">
+<script src="receipt.js"></script>
+
+    <div class="floating-bar">
+
+    <div class="floating-short">
+        <span>Short / Excess</span>
+        <strong id="floatingShort">
+            ₹0
+        </strong>
+    </div>
+
+    <button id="downloadReceiptBtn">
+        🧾 Receipt
+    </button>
+
+</div>
+
+
+    <div id="receiptTemplate">
+
+    <div class="receipt-card">
+
+        <h1>⛽ Fuel Sale Receipt</h1>
+
+        <div id="receiptContent">
+
+        </div>
+
+    </div>
+
+    </div>
+
+    
 </body>
 </html>
