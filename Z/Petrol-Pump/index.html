@@ -667,7 +667,615 @@ button:active{
 
 
 </div>
+<script> 
+// =======================
+// Local Storage Helpers
+// =======================
 
+function save(key, value) {
+    localStorage.setItem(key, JSON.stringify(value));
+}
+
+function load(key, defaultValue = null) {
+    const data = localStorage.getItem(key);
+    return data ? JSON.parse(data) : defaultValue;
+}
+
+
+// =======================
+// Fuel Rates
+// =======================
+
+let petrolRate = load("petrolRate", 0);
+let dieselRate = load("dieselRate", 0);
+
+const petrolRateText =
+    document.getElementById("petrolRateText");
+
+const dieselRateText =
+    document.getElementById("dieselRateText");
+
+function updateRates() {
+    petrolRateText.innerText =
+        "₹ " + petrolRate;
+
+    dieselRateText.innerText =
+        "₹ " + dieselRate;
+}
+
+document
+.getElementById("editPetrolRate")
+.onclick = () => {
+
+    const value =
+        prompt(
+            "Enter Petrol Rate",
+            petrolRate
+        );
+
+    if (value === null) return;
+
+    petrolRate =
+        parseFloat(value) || 0;
+
+    save(
+        "petrolRate",
+        petrolRate
+    );
+
+    updateRates();
+    calculate();
+};
+
+document
+.getElementById("editDieselRate")
+.onclick = () => {
+
+    const value =
+        prompt(
+            "Enter Diesel Rate",
+            dieselRate
+        );
+
+    if (value === null) return;
+
+    dieselRate =
+        parseFloat(value) || 0;
+
+    save(
+        "dieselRate",
+        dieselRate
+    );
+
+    updateRates();
+    calculate();
+};
+
+updateRates();
+
+
+// =======================
+// Dynamic Inputs
+// =======================
+
+const depositContainer =
+    document.getElementById(
+        "depositContainer"
+    );
+
+const cardContainer =
+    document.getElementById(
+        "cardContainer"
+    );
+
+function createInput(
+    container,
+    className,
+    placeholder,
+    value = ""
+) {
+    const div =
+        document.createElement("div");
+
+    div.className = className;
+
+    div.innerHTML =
+        `<input type="number"
+         placeholder="${placeholder}"
+         value="${value}">`;
+
+    container.appendChild(div);
+
+    div.querySelector("input")
+        .addEventListener(
+            "input",
+            calculate
+        );
+}
+
+function loadDynamicFields() {
+
+    let deposits =
+        load("deposits", []);
+
+    if (deposits.length === 0)
+        deposits = [""];
+
+    deposits.forEach(v =>
+        createInput(
+            depositContainer,
+            "deposit-item",
+            "Deposit Amount",
+            v
+        )
+    );
+
+    let cards =
+        load("cards", []);
+
+    if (cards.length === 0)
+        cards = [""];
+
+    cards.forEach(v =>
+        createInput(
+            cardContainer,
+            "card-item",
+            "Card Amount",
+            v
+        )
+    );
+}
+
+loadDynamicFields();
+
+document
+.getElementById(
+    "addDepositBtn"
+)
+.onclick = () => {
+    createInput(
+        depositContainer,
+        "deposit-item",
+        "Deposit Amount"
+    );
+};
+
+document
+.getElementById(
+    "addCardBtn"
+)
+.onclick = () => {
+    createInput(
+        cardContainer,
+        "card-item",
+        "Card Amount"
+    );
+};
+
+
+// =======================
+// Net Balance
+// =======================
+
+const noteIds = [
+    "n500",
+    "n200",
+    "n100",
+    "n50",
+    "n20",
+    "n10"
+];
+
+const coinIds = [
+    "c10",
+    "c5",
+    "c2",
+    "c1"
+];
+
+function num(id) {
+    return parseFloat(
+        document.getElementById(id)?.value
+    ) || 0;
+}
+
+document
+.querySelectorAll("input")
+.forEach(input => {
+    input.addEventListener(
+        "input",
+        calculate
+    );
+});
+
+document
+.getElementById(
+    "directAmountToggle"
+)
+.addEventListener(
+    "change",
+    calculate
+);
+
+document
+.getElementById(
+    "directAmountInput"
+)
+.addEventListener(
+    "input",
+    calculate
+);
+
+
+// =======================
+// Main Calculation
+// =======================
+
+function calculate() {
+
+    // Deposit
+
+    let depositTotal = 0;
+
+    const deposits = [];
+
+    depositContainer
+        .querySelectorAll("input")
+        .forEach(i => {
+            const v =
+                parseFloat(i.value)
+                || 0;
+
+            depositTotal += v;
+
+            deposits.push(
+                i.value
+            );
+        });
+
+    save(
+        "deposits",
+        deposits
+    );
+
+    document
+    .getElementById(
+        "depositTotal"
+    )
+    .innerText =
+        depositTotal.toFixed(2);
+
+
+    // Card
+
+    let cardTotal = 0;
+
+    const cards = [];
+
+    cardContainer
+        .querySelectorAll("input")
+        .forEach(i => {
+            const v =
+                parseFloat(i.value)
+                || 0;
+
+            cardTotal += v;
+
+            cards.push(
+                i.value
+            );
+        });
+
+    save(
+        "cards",
+        cards
+    );
+
+    document
+    .getElementById(
+        "cardTotal"
+    )
+    .innerText =
+        cardTotal.toFixed(2);
+
+
+    // Notes
+
+    const notes =
+        num("n500") * 500 +
+        num("n200") * 200 +
+        num("n100") * 100 +
+        num("n50") * 50 +
+        num("n20") * 20 +
+        num("n10") * 10;
+
+    document
+    .getElementById(
+        "notesTotal"
+    )
+    .innerText =
+        notes.toFixed(2);
+
+
+    // Coins
+
+    const coins =
+        num("c10") * 10 +
+        num("c5") * 5 +
+        num("c2") * 2 +
+        num("c1");
+
+    document
+    .getElementById(
+        "coinsTotal"
+    )
+    .innerText =
+        coins.toFixed(2);
+
+
+    // Net Balance
+
+    let netBalance = 0;
+
+    const directMode =
+        document
+        .getElementById(
+            "directAmountToggle"
+        )
+        .checked;
+
+    if (directMode) {
+        netBalance =
+            num(
+                "directAmountInput"
+            );
+    }
+    else {
+        netBalance =
+            notes + coins;
+    }
+
+    document
+    .getElementById(
+        "netBalanceTotal"
+    )
+    .innerText =
+        netBalance.toFixed(2);
+
+
+    // Petrol
+
+    const petrolLiter =
+        num("petrolClose") -
+        num("petrolOpen");
+
+    const petrolAmount =
+        petrolLiter *
+        petrolRate;
+
+    document
+    .getElementById(
+        "petrolLiter"
+    )
+    .innerText =
+        petrolLiter.toFixed(3);
+
+    document
+    .getElementById(
+        "petrolAmount"
+    )
+    .innerText =
+        petrolAmount.toFixed(2);
+
+
+    // Diesel 1
+
+    const diesel1Liter =
+        num("diesel1Close") -
+        num("diesel1Open");
+
+    const diesel1Amount =
+        diesel1Liter *
+        dieselRate;
+
+    document
+    .getElementById(
+        "diesel1Liter"
+    )
+    .innerText =
+        diesel1Liter.toFixed(3);
+
+    document
+    .getElementById(
+        "diesel1Amount"
+    )
+    .innerText =
+        diesel1Amount.toFixed(2);
+
+
+    // Diesel 2
+
+    const diesel2Liter =
+        num("diesel2Close") -
+        num("diesel2Open");
+
+    const diesel2Amount =
+        diesel2Liter *
+        dieselRate;
+
+    document
+    .getElementById(
+        "diesel2Liter"
+    )
+    .innerText =
+        diesel2Liter.toFixed(3);
+
+    document
+    .getElementById(
+        "diesel2Amount"
+    )
+    .innerText =
+        diesel2Amount.toFixed(2);
+
+
+    // Final
+
+    const totalSale =
+        petrolAmount +
+        diesel1Amount +
+        diesel2Amount;
+
+    const collection =
+        depositTotal +
+        cardTotal +
+        netBalance;
+
+    document
+    .getElementById(
+        "collectionAmount"
+    )
+    .innerText =
+        collection.toFixed(2);
+
+    document
+    .getElementById(
+        "totalSale"
+    )
+    .innerText =
+        totalSale.toFixed(2);
+
+    const diff =
+        totalSale -
+        collection;
+
+    const result =
+        document
+        .getElementById(
+            "shortExcessResult"
+        );
+
+    if (diff > 0) {
+        result.innerHTML =
+            "🔴 Short ₹ " +
+            diff.toFixed(2);
+
+        result.className =
+            "short";
+    }
+    else if (diff < 0) {
+        result.innerHTML =
+            "🟢 Excess ₹ " +
+            Math.abs(
+                diff
+            ).toFixed(2);
+
+        result.className =
+            "excess";
+    }
+    else {
+        result.innerHTML =
+            "✅ Perfect Match";
+
+        result.className =
+            "";
+    }
+}
+
+
+// =======================
+// Save All Inputs
+// =======================
+
+window.addEventListener(
+    "input",
+    () => {
+
+        document
+        .querySelectorAll(
+            "input[id]"
+        )
+        .forEach(i => {
+            save(
+                i.id,
+                i.value
+            );
+        });
+
+    }
+);
+
+
+// Restore Inputs
+
+window.addEventListener(
+    "load",
+    () => {
+
+        document
+        .querySelectorAll(
+            "input[id]"
+        )
+        .forEach(i => {
+            const value =
+                load(
+                    i.id,
+                    ""
+                );
+
+            i.value = value;
+        });
+
+        calculate();
+    }
+);
+
+
+// =======================
+// Reset
+// =======================
+
+document
+.getElementById(
+    "resetBtn"
+)
+.onclick = () => {
+
+    if (
+        !confirm(
+            "Reset Calculation?"
+        )
+    ) return;
+
+    const petrol =
+        load(
+            "petrolRate",
+            0
+        );
+
+    const diesel =
+        load(
+            "dieselRate",
+            0
+        );
+
+    localStorage.clear();
+
+    save(
+        "petrolRate",
+        petrol
+    );
+
+    save(
+        "dieselRate",
+        diesel
+    );
+
+    location.reload();
+};
+
+
+calculate();
+</script>
 
 <script src="script.js"></script>
 
