@@ -3,66 +3,98 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bill Generator</title>
+<title>Indian Oil Bill Generator</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
 <style>
+*{
+    box-sizing:border-box;
+    margin:0;
+    padding:0;
+}
+
 body{
-    font-family: Arial, sans-serif;
-    background:#f4f4f4;
+    font-family:Arial, sans-serif;
+    background:#f2f2f2;
+    padding:20px;
     display:flex;
     justify-content:center;
-    align-items:center;
-    min-height:100vh;
-    margin:0;
 }
 
 .container{
-    background:#fff;
-    padding:25px;
-    border-radius:12px;
-    box-shadow:0 5px 20px rgba(0,0,0,0.15);
-    width:400px;
+    width:550px;
 }
 
 .receipt{
-    border:2px dashed #333;
-    padding:20px;
     background:#fff;
+    padding:25px;
+    border:2px dashed #000;
+    border-radius:10px;
+    box-shadow:0 5px 15px rgba(0,0,0,0.15);
 }
 
-h2{
+h1{
     text-align:center;
-    margin-top:0;
+    font-size:28px;
+    margin-bottom:5px;
+}
+
+.staff{
+    text-align:center;
+    margin-bottom:20px;
+    color:#555;
+}
+
+h3{
+    margin-top:20px;
+    margin-bottom:10px;
+    border-bottom:1px solid #ddd;
+    padding-bottom:5px;
+    color:#0a5d00;
 }
 
 .row{
     display:flex;
     justify-content:space-between;
-    margin:10px 0;
+    margin:7px 0;
 }
 
 .total{
-    font-size:22px;
     font-weight:bold;
-    color:green;
+    color:#0a5d00;
+}
+
+.summary{
+    font-size:18px;
 }
 
 button{
     width:100%;
+    padding:15px;
     margin-top:20px;
-    padding:12px;
     border:none;
+    border-radius:10px;
     background:#007bff;
     color:#fff;
-    border-radius:8px;
+    font-size:18px;
     cursor:pointer;
-    font-size:16px;
 }
 
 button:hover{
     background:#0056b3;
+}
+
+.thank{
+    text-align:center;
+    margin-top:25px;
+    color:#555;
+}
+
+@media print{
+    button{
+        display:none;
+    }
 }
 </style>
 </head>
@@ -70,46 +102,182 @@ button:hover{
 
 <div class="container">
 
-    <div class="receipt" id="bill">
-        <h2>ABC STORE</h2>
+<div class="receipt" id="bill">
 
-        <div class="row">
-            <span>Bill No:</span>
-            <span>#1001</span>
-        </div>
-
-        <div class="row">
-            <span>Date:</span>
-            <span>01-07-2026</span>
-        </div>
-
-        <hr>
-
-        <div class="row">
-            <span>Product</span>
-            <span>₹500</span>
-        </div>
-
-        <div class="row">
-            <span>GST</span>
-            <span>₹90</span>
-        </div>
-
-        <hr>
-
-        <div class="row total">
-            <span>Total</span>
-            <span>₹590</span>
-        </div>
-
-        <p style="text-align:center;">
-            Thank You ❤️
-        </p>
+    <h1>INDIAN OIL</h1>
+    <div class="staff">
+        Staff Name: <b>Rahul Kumar Puri</b>
     </div>
 
-    <button onclick="downloadBill()">
-        Print Receipt
-    </button>
+    <h3>Fuel Rates</h3>
+
+    <div class="row">
+        <span>Petrol Rate</span>
+        <span>₹114.18</span>
+    </div>
+
+    <div class="row">
+        <span>Diesel Rate</span>
+        <span>₹103.08</span>
+    </div>
+
+    <h3>Deposits</h3>
+
+    <div class="row">
+        <span>Deposited Amount</span>
+        <span>₹10,000 + ₹6,500</span>
+    </div>
+
+    <div class="row total">
+        <span>Total Deposit</span>
+        <span>₹16,500.00</span>
+    </div>
+
+    <h3>Card Amount</h3>
+
+    <div class="row"><span>Card 1</span><span>₹1501.87</span></div>
+    <div class="row"><span>Card 2</span><span>₹1000.00</span></div>
+    <div class="row"><span>Card 3</span><span>₹1000.00</span></div>
+    <div class="row"><span>Card 4</span><span>₹100.00</span></div>
+    <div class="row"><span>Card 5</span><span>₹4300.49</span></div>
+    <div class="row"><span>Card 6</span><span>₹407.62</span></div>
+    <div class="row"><span>Card 7</span><span>₹4252.00</span></div>
+    <div class="row"><span>Card 8</span><span>₹7075.00</span></div>
+
+    <div class="row total">
+        <span>Total Card</span>
+        <span>₹19,636.98</span>
+    </div>
+
+    <div class="row total">
+        <span>Total UPI Payments</span>
+        <span>₹9,529.83</span>
+    </div>
+
+    <h3>Cash Notes</h3>
+
+    <div class="row"><span>₹500 Notes</span><span>11</span></div>
+    <div class="row"><span>₹200 Notes</span><span>8</span></div>
+    <div class="row"><span>₹100 Notes</span><span>8</span></div>
+    <div class="row"><span>₹50 Notes</span><span>3</span></div>
+    <div class="row"><span>₹20 Notes</span><span>0</span></div>
+    <div class="row"><span>₹10 Notes</span><span>13</span></div>
+
+    <div class="row total">
+        <span>Total Notes</span>
+        <span>₹8,180.00</span>
+    </div>
+
+    <h3>Coins</h3>
+
+    <div class="row"><span>₹10 Coins</span><span>5</span></div>
+    <div class="row"><span>₹5 Coins</span><span>0</span></div>
+    <div class="row"><span>₹2 Coins</span><span>0</span></div>
+    <div class="row"><span>₹1 Coins</span><span>0</span></div>
+
+    <div class="row total">
+        <span>Total Coins</span>
+        <span>₹50.00</span>
+    </div>
+
+    <div class="row total summary">
+        <span>Net Balance</span>
+        <span>₹8,230.00</span>
+    </div>
+
+    <h3>Petrol A2 Sale</h3>
+
+    <div class="row">
+        <span>Opening Totalizer</span>
+        <span>1395690.235</span>
+    </div>
+
+    <div class="row">
+        <span>Closing Totalizer</span>
+        <span>1395906.445</span>
+    </div>
+
+    <div class="row">
+        <span>Sale Liter</span>
+        <span>216.210</span>
+    </div>
+
+    <div class="row total">
+        <span>Amount</span>
+        <span>₹24,686.86</span>
+    </div>
+
+    <h3>Diesel A2 Sale</h3>
+
+    <div class="row">
+        <span>Opening Totalizer</span>
+        <span>2307951.910</span>
+    </div>
+
+    <div class="row">
+        <span>Closing Totalizer</span>
+        <span>2308235.280</span>
+    </div>
+
+    <div class="row">
+        <span>Sale Liter</span>
+        <span>283.370</span>
+    </div>
+
+    <div class="row total">
+        <span>Amount</span>
+        <span>₹29,209.78</span>
+    </div>
+
+    <h3>Diesel A1 Sale</h3>
+
+    <div class="row">
+        <span>Opening Totalizer</span>
+        <span>0</span>
+    </div>
+
+    <div class="row">
+        <span>Closing Totalizer</span>
+        <span>0</span>
+    </div>
+
+    <div class="row">
+        <span>Sale Liter</span>
+        <span>0.000</span>
+    </div>
+
+    <div class="row">
+        <span>Amount</span>
+        <span>₹0.00</span>
+    </div>
+
+    <h3>Final Summary</h3>
+
+    <div class="row total summary">
+        <span>Collection Amount</span>
+        <span>₹53,896.81</span>
+    </div>
+
+    <div class="row total summary">
+        <span>Total Sale</span>
+        <span>₹53,896.64</span>
+    </div>
+
+    <div class="row total summary">
+        <span>Short / Excess</span>
+        <span>🟢 Excess ₹0.17</span>
+    </div>
+
+    <div class="thank">
+        Thank You ❤️<br>
+        Indian Oil Billing System
+    </div>
+
+</div>
+
+<button onclick="downloadBill()">
+    🖼️ Print Receipt & Download Image
+</button>
 
 </div>
 
@@ -117,9 +285,12 @@ button:hover{
 function downloadBill() {
     const bill = document.getElementById("bill");
 
-    html2canvas(bill).then(canvas => {
+    html2canvas(bill, {
+        scale: 3,
+        useCORS: true
+    }).then(canvas => {
         const link = document.createElement("a");
-        link.download = "receipt.png";
+        link.download = "Indian-Oil-Bill.png";
         link.href = canvas.toDataURL("image/png");
         link.click();
     });
