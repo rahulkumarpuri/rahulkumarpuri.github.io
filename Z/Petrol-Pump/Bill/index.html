@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bill Generator</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<style>
+body{
+    font-family: Arial, sans-serif;
+    background:#f4f4f4;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    min-height:100vh;
+    margin:0;
+}
+
+.container{
+    background:#fff;
+    padding:25px;
+    border-radius:12px;
+    box-shadow:0 5px 20px rgba(0,0,0,0.15);
+    width:400px;
+}
+
+.receipt{
+    border:2px dashed #333;
+    padding:20px;
+    background:#fff;
+}
+
+h2{
+    text-align:center;
+    margin-top:0;
+}
+
+.row{
+    display:flex;
+    justify-content:space-between;
+    margin:10px 0;
+}
+
+.total{
+    font-size:22px;
+    font-weight:bold;
+    color:green;
+}
+
+button{
+    width:100%;
+    margin-top:20px;
+    padding:12px;
+    border:none;
+    background:#007bff;
+    color:#fff;
+    border-radius:8px;
+    cursor:pointer;
+    font-size:16px;
+}
+
+button:hover{
+    background:#0056b3;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+
+    <div class="receipt" id="bill">
+        <h2>ABC STORE</h2>
+
+        <div class="row">
+            <span>Bill No:</span>
+            <span>#1001</span>
+        </div>
+
+        <div class="row">
+            <span>Date:</span>
+            <span>01-07-2026</span>
+        </div>
+
+        <hr>
+
+        <div class="row">
+            <span>Product</span>
+            <span>₹500</span>
+        </div>
+
+        <div class="row">
+            <span>GST</span>
+            <span>₹90</span>
+        </div>
+
+        <hr>
+
+        <div class="row total">
+            <span>Total</span>
+            <span>₹590</span>
+        </div>
+
+        <p style="text-align:center;">
+            Thank You ❤️
+        </p>
+    </div>
+
+    <button onclick="downloadBill()">
+        Print Receipt
+    </button>
+
+</div>
+
+<script>
+function downloadBill() {
+    const bill = document.getElementById("bill");
+
+    html2canvas(bill).then(canvas => {
+        const link = document.createElement("a");
+        link.download = "receipt.png";
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+    });
+}
+</script>
+
+</body>
+</html>
